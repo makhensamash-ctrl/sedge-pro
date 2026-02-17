@@ -13,7 +13,7 @@ const HeroSection = () => (
         alt="Construction management platform with expert support"
         className="w-full h-full object-cover opacity-30"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/95 to-primary/70" />
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-primary/30" />
     </div>
 
     <div className="container mx-auto px-4 relative z-10">
