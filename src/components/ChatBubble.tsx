@@ -4,11 +4,26 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const ChatBubble = () => {
   const [open, setOpen] = useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setOpen(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
+    const section = document.getElementById("pricing");
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAutoOpened) {
+          setOpen(true);
+          setHasAutoOpened(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [hasAutoOpened]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
