@@ -7,7 +7,7 @@ const Footer = () => (
       <div className="grid md:grid-cols-3 gap-10 mb-10">
         {/* Brand */}
         <div>
-          <img src={logo} alt="SEDGE Pro" className="h-12 mb-4" />
+          <img src={logo} alt="SEDGE Pro" className="h-20 mb-4" />
           <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
             Helping construction businesses build profitable and scalable operations with software + expert support.
           </p>
