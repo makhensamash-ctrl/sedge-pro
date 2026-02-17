@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MessageCircle, X, Send, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const quickOptions = [
@@ -8,15 +8,20 @@ const quickOptions = [
   "I need to request a trial",
 ];
 
+type Step = "options" | "details" | "done";
+
 const ChatBubble = () => {
   const [open, setOpen] = useState(false);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("options");
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const section = document.getElementById("pricing");
     if (!section) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAutoOpened) {
@@ -27,10 +32,32 @@ const ChatBubble = () => {
       },
       { threshold: 0.2 }
     );
-
     observer.observe(section);
     return () => observer.disconnect();
   }, [hasAutoOpened]);
+
+  useEffect(() => {
+    messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight, behavior: "smooth" });
+  }, [step, selected]);
+
+  const handleSelect = (option: string) => {
+    setSelected(option);
+    setStep("details");
+  };
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = "Name is required";
+    if (!form.email.trim()) errs.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = "Invalid email";
+    if (!form.phone.trim()) errs.phone = "Phone is required";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (validate()) setStep("done");
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -54,17 +81,17 @@ const ChatBubble = () => {
             </div>
 
             {/* Messages */}
-            <div className="p-4 h-60 overflow-y-auto bg-surface flex flex-col gap-3">
+            <div ref={messagesRef} className="p-4 h-72 overflow-y-auto bg-surface flex flex-col gap-3">
               <div className="bg-accent/10 text-foreground text-sm p-3 rounded-xl rounded-tl-none max-w-[85%]">
                 👋 Hi there! How can we help you today?
               </div>
 
-              {!selected && (
+              {step === "options" && (
                 <div className="flex flex-col gap-2 mt-1">
                   {quickOptions.map((option) => (
                     <button
                       key={option}
-                      onClick={() => setSelected(option)}
+                      onClick={() => handleSelect(option)}
                       className="text-left text-sm px-4 py-2.5 rounded-xl border border-accent/30 bg-accent/5 text-foreground hover:bg-accent/15 hover:border-accent transition-colors"
                     >
                       {option}
@@ -73,27 +100,68 @@ const ChatBubble = () => {
                 </div>
               )}
 
-              {selected && (
+              {step !== "options" && selected && (
                 <>
                   <div className="bg-primary/10 text-foreground text-sm p-3 rounded-xl rounded-tr-none max-w-[85%] self-end">
                     {selected}
                   </div>
                   <div className="bg-accent/10 text-foreground text-sm p-3 rounded-xl rounded-tl-none max-w-[85%]">
-                    Thanks for reaching out! A team member will be in touch shortly. You can also email us at <span className="font-semibold text-accent">info@sedgepro.co.za</span>.
+                    Great! Please share your details so we can get back to you:
                   </div>
                 </>
               )}
-            </div>
 
-            {/* Input */}
-            <div className="p-3 border-t border-border flex gap-2">
-              <input
-                className="flex-1 px-3 py-2 rounded-full bg-muted text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                placeholder="Type a message..."
-              />
-              <button className="w-9 h-9 rounded-full bg-accent flex items-center justify-center hover:bg-green-dark transition-colors">
-                <Send className="w-4 h-4 text-accent-foreground" />
-              </button>
+              {step === "details" && (
+                <div className="flex flex-col gap-2 mt-1">
+                  <div>
+                    <input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Full Name"
+                      maxLength={100}
+                      className="w-full px-3 py-2 rounded-lg bg-muted text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      placeholder="Email Address"
+                      type="email"
+                      maxLength={255}
+                      className="w-full px-3 py-2 rounded-lg bg-muted text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      placeholder="Phone Number"
+                      type="tel"
+                      maxLength={20}
+                      className="w-full px-3 py-2 rounded-lg bg-muted text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    {errors.phone && <p className="text-destructive text-xs mt-1">{errors.phone}</p>}
+                  </div>
+                  <button
+                    onClick={handleSubmit}
+                    className="w-full py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-green-dark transition-colors"
+                  >
+                    Submit
+                  </button>
+                </div>
+              )}
+
+              {step === "done" && (
+                <div className="bg-accent/10 text-foreground text-sm p-3 rounded-xl rounded-tl-none max-w-[85%] flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                  <span>
+                    Thank you, <strong>{form.name.trim()}</strong>! We'll contact you shortly at <strong>{form.email.trim()}</strong>.
+                  </span>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
