@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const ChatBubble = () => {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setOpen(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
