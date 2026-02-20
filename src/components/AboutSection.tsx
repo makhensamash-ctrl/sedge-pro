@@ -5,7 +5,7 @@ const highlights = [
 {
   icon: ShieldCheck,
   title: "Trusted Platform",
-  desc: "Built for the building construction industry, by construction professionals."
+  desc: "Built for contractors by construction professionals, so no professionals are required to use it."
 },
 {
   icon: Users,
