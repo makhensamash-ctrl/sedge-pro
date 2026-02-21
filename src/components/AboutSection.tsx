@@ -15,7 +15,7 @@ const highlights = [
 {
   icon: BarChart3,
   title: "Scalable Growth",
-  desc: "Helping construction businesses build profitable and scalable operations."
+  desc: "We help contractors know their numbers and grow their profits with our systems support."
 }];
 
 
