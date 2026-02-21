@@ -19,8 +19,10 @@ import LeadDialog from "@/components/crm/LeadDialog";
 import LeadDetailDialog from "@/components/crm/LeadDetailDialog";
 import StageManager from "@/components/crm/StageManager";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CRM = () => {
   const { user } = useAuth();
@@ -34,6 +36,8 @@ const CRM = () => {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [adminMap, setAdminMap] = useState<Map<string, string>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterAssignee, setFilterAssignee] = useState<string>("all");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -220,6 +224,23 @@ const CRM = () => {
     toast.success(userId ? "Lead assigned" : "Lead unassigned");
   };
 
+  const query = searchQuery.toLowerCase().trim();
+  const filteredLeads = leads.filter((l) => {
+    if (query) {
+      const assigneeName = l.assigned_to ? adminMap.get(l.assigned_to)?.toLowerCase() : "";
+      const match =
+        l.client_name.toLowerCase().includes(query) ||
+        (l.email?.toLowerCase().includes(query)) ||
+        (l.source?.toLowerCase().includes(query)) ||
+        (assigneeName?.includes(query));
+      if (!match) return false;
+    }
+    if (filterAssignee === "unassigned") return !l.assigned_to;
+    if (filterAssignee !== "all") return l.assigned_to === filterAssignee;
+    return true;
+  });
+
+  const hasFilters = query || filterAssignee !== "all";
   const sortedStages = [...stages].sort((a, b) => a.position - b.position);
 
   return (
@@ -235,6 +256,41 @@ const CRM = () => {
         </div>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email, source..."
+            className="pl-9 h-9"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+          <SelectTrigger className="w-48 h-9">
+            <SelectValue placeholder="Filter by assignee" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All assignees</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {Array.from(adminMap.entries()).map(([id, name]) => (
+              <SelectItem key={id} value={id}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasFilters && (
+          <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterAssignee("all"); }}>
+            Clear filters
+          </Button>
+        )}
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -247,7 +303,7 @@ const CRM = () => {
             <PipelineColumn
               key={stage.id}
               stage={stage}
-              leads={leads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
+              leads={filteredLeads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
               onAddLead={handleAddLead}
               onEditLead={handleEditLead}
               onDeleteLead={handleDeleteLead}
