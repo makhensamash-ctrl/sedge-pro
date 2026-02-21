@@ -65,8 +65,33 @@ serve(async (req) => {
       package_name: packageName,
       amount_cents: amount,
       customer_email: customerEmail || null,
-      status: "created",
+      status: "completed",
       metadata: { customerName, customerPhone },
+    });
+
+    // Create a lead in the "Won" pipeline stage
+    const WON_STAGE_ID = "18e1a981-a58e-4185-bb0f-e192c78a8e9e";
+
+    // Get next position in Won stage
+    const { data: lastLead } = await supabaseAdmin
+      .from("leads")
+      .select("position")
+      .eq("stage_id", WON_STAGE_ID)
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextPosition = (lastLead?.position ?? -1) + 1;
+
+    await supabaseAdmin.from("leads").insert({
+      client_name: customerName || customerEmail || "Unknown",
+      email: customerEmail || null,
+      phone: customerPhone || null,
+      source: "Website",
+      package: packageName,
+      stage_id: WON_STAGE_ID,
+      position: nextPosition,
+      notes: `Payment completed – ${packageName} (R${(amount / 100).toLocaleString()})`,
     });
 
     return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
