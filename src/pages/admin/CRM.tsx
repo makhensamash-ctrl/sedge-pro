@@ -16,6 +16,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import PipelineColumn, { type PipelineStage } from "@/components/crm/PipelineColumn";
 import LeadCard, { type Lead } from "@/components/crm/LeadCard";
 import LeadDialog from "@/components/crm/LeadDialog";
+import LeadDetailDialog from "@/components/crm/LeadDetailDialog";
 import StageManager from "@/components/crm/StageManager";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -30,6 +31,9 @@ const CRM = () => {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [addToStageId, setAddToStageId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [adminMap, setAdminMap] = useState<Map<string, string>>(new Map());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -51,10 +55,21 @@ const CRM = () => {
     setLeads((data as Lead[]) || []);
   }, []);
 
+  const fetchAdminMap = useCallback(async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id");
+    if (!roles) return;
+    const userIds = roles.map((r) => r.user_id);
+    const { data: profiles } = await supabase.from("profiles").select("user_id, email, full_name").in("user_id", userIds);
+    const map = new Map<string, string>();
+    profiles?.forEach((p) => map.set(p.user_id, p.full_name || p.email));
+    setAdminMap(map);
+  }, []);
+
   useEffect(() => {
     fetchStages();
     fetchLeads();
-  }, [fetchStages, fetchLeads]);
+    fetchAdminMap();
+  }, [fetchStages, fetchLeads, fetchAdminMap]);
 
   const handleAddLead = (stageId: string) => {
     setEditingLead(null);
@@ -180,6 +195,14 @@ const CRM = () => {
     }
   };
 
+  const handleAssignLead = async (leadId: string, userId: string | null) => {
+    const { error } = await supabase.from("leads").update({ assigned_to: userId }).eq("id", leadId);
+    if (error) { toast.error(error.message); return; }
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, assigned_to: userId } : l)));
+    setDetailLead((prev) => prev && prev.id === leadId ? { ...prev, assigned_to: userId } : prev);
+    toast.success(userId ? "Lead assigned" : "Lead unassigned");
+  };
+
   const sortedStages = [...stages].sort((a, b) => a.position - b.position);
 
   return (
@@ -211,6 +234,8 @@ const CRM = () => {
               onAddLead={handleAddLead}
               onEditLead={handleEditLead}
               onDeleteLead={handleDeleteLead}
+              onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
+              adminMap={adminMap}
             />
           ))}
         </div>
@@ -218,7 +243,7 @@ const CRM = () => {
         <DragOverlay>
           {activeLead && (
             <div className="rotate-3 opacity-90">
-              <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} />
+              <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} onOpenDetail={() => {}} />
             </div>
           )}
         </DragOverlay>
@@ -232,6 +257,13 @@ const CRM = () => {
         stages={sortedStages}
         onSave={handleSaveLead}
         saving={saving}
+      />
+
+      <LeadDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        lead={detailLead}
+        onAssign={handleAssignLead}
       />
     </div>
   );
