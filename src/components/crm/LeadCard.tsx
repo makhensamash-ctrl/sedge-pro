@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Phone, Mail, Globe, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Phone, Mail, Globe, GripVertical, Pencil, Trash2, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface Lead {
@@ -13,15 +13,18 @@ export interface Lead {
   position: number;
   notes: string | null;
   created_at: string;
+  assigned_to: string | null;
 }
 
 interface LeadCardProps {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
+  onOpenDetail: (lead: Lead) => void;
+  assigneeName?: string | null;
 }
 
-const LeadCard = ({ lead, onEdit, onDelete }: LeadCardProps) => {
+const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCardProps) => {
   const {
     attributes,
     listeners,
@@ -41,13 +44,15 @@ const LeadCard = ({ lead, onEdit, onDelete }: LeadCardProps) => {
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-card border border-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group"
+      className="bg-card border border-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
+      onClick={() => onOpenDetail(lead)}
     >
       <div className="flex items-start justify-between gap-2">
         <div
           {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing mt-1 text-muted-foreground/40 hover:text-muted-foreground"
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-4 h-4" />
         </div>
@@ -71,12 +76,18 @@ const LeadCard = ({ lead, onEdit, onDelete }: LeadCardProps) => {
               <span className="truncate">{lead.source}</span>
             </div>
           )}
+          {assigneeName && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-primary/80">
+              <UserCircle className="w-3 h-3 shrink-0" />
+              <span className="truncate">{assigneeName}</span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(lead)}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
             <Pencil className="w-3 h-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onDelete(lead.id)}>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}>
             <Trash2 className="w-3 h-3" />
           </Button>
         </div>

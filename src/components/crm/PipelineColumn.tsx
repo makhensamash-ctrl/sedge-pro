@@ -17,9 +17,11 @@ interface PipelineColumnProps {
   onAddLead: (stageId: string) => void;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (id: string) => void;
+  onOpenDetail: (lead: Lead) => void;
+  adminMap: Map<string, string>;
 }
 
-const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead }: PipelineColumnProps) => {
+const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onOpenDetail, adminMap }: PipelineColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { type: "stage" } });
 
   return (
@@ -47,7 +49,14 @@ const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead }: P
       >
         <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
           {leads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} onEdit={onEditLead} onDelete={onDeleteLead} />
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onEdit={onEditLead}
+              onDelete={onDeleteLead}
+              onOpenDetail={onOpenDetail}
+              assigneeName={lead.assigned_to ? adminMap.get(lead.assigned_to) : null}
+            />
           ))}
         </SortableContext>
       </div>
