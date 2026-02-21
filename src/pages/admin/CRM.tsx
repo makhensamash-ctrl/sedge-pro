@@ -113,22 +113,23 @@ const CRM = () => {
   };
 
   const handleSaveLead = async (
-    data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string },
+    data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null },
     id?: string
   ) => {
+    const saveData = { ...data, package: data.package === "none" ? null : data.package };
     setSaving(true);
     try {
       if (id) {
-        const { error } = await supabase.from("leads").update(data).eq("id", id);
+        const { error } = await supabase.from("leads").update(saveData).eq("id", id);
         if (error) throw error;
-        setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...data } : l)));
+        setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...saveData } : l)));
         toast.success("Lead updated");
       } else {
-        const stageLeads = leads.filter((l) => l.stage_id === data.stage_id);
+        const stageLeads = leads.filter((l) => l.stage_id === saveData.stage_id);
         const maxPos = stageLeads.reduce((max, l) => Math.max(max, l.position), -1);
         const { data: newLead, error } = await supabase
           .from("leads")
-          .insert({ ...data, position: maxPos + 1, created_by: user?.id })
+          .insert({ ...saveData, position: maxPos + 1, created_by: user?.id })
           .select()
           .single();
         if (error) throw error;

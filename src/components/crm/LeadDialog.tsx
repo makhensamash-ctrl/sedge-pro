@@ -14,11 +14,12 @@ interface LeadDialogProps {
   lead: Lead | null;
   stageId: string;
   stages: PipelineStage[];
-  onSave: (data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string }, id?: string) => void;
+  onSave: (data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null }, id?: string) => void;
   saving: boolean;
 }
 
 const leadSources = ["Website", "Referral", "Social Media", "Cold Call", "Email Campaign", "Walk-in", "Tender", "Other"];
+const leadPackages = ["Certificates & Invoicing", "Profitability Management", "Project Collaboration Service"];
 
 const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving }: LeadDialogProps) => {
   const [clientName, setClientName] = useState("");
@@ -27,6 +28,7 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
   const [source, setSource] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -36,13 +38,14 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
       setSource(lead?.source || "");
       setNotes(lead?.notes || "");
       setSelectedStage(lead?.stage_id || stageId);
+      setSelectedPackage(lead?.package || "");
     }
   }, [open, lead, stageId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(
-      { client_name: clientName.trim(), phone: phone.trim(), email: email.trim(), source, notes: notes.trim(), stage_id: selectedStage },
+      { client_name: clientName.trim(), phone: phone.trim(), email: email.trim(), source, notes: notes.trim(), stage_id: selectedStage, package: selectedPackage || null },
       lead?.id
     );
   };
@@ -95,6 +98,20 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Package</Label>
+            <Select value={selectedPackage} onValueChange={setSelectedPackage}>
+              <SelectTrigger>
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {leadPackages.map((p) => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Notes</Label>
