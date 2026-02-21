@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
+  { label: "CRM Pipeline", icon: Kanban, path: "/admin/crm" },
   { label: "Payments", icon: CreditCard, path: "/admin/payments" },
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },

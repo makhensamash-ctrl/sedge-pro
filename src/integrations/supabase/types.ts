@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      leads: {
+        Row: {
+          client_name: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          position: number
+          source: string | null
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          source?: string | null
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          source?: string | null
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_cents: number
@@ -52,6 +102,33 @@ export type Database = {
           package_name?: string
           payment_id?: string | null
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pipeline_stages: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
           updated_at?: string
         }
         Relationships: []
