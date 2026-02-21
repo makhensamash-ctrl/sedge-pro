@@ -28,19 +28,19 @@ const AdminDashboard = () => {
     }
   }, [user]);
 
-  // Check if 2FA is required but not enrolled
+  // Check if 2FA is required for this user but not enrolled
   useEffect(() => {
     if (!user || mustChangePassword) return;
 
     const check2fa = async () => {
-      // Check if org requires 2FA
-      const { data: settings } = await supabase
-        .from("app_settings")
+      // Check if this user has require_2fa enabled
+      const { data: profile } = await supabase
+        .from("profiles")
         .select("require_2fa")
-        .limit(1)
+        .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!settings?.require_2fa) return;
+      if (!(profile as any)?.require_2fa) return;
 
       // Check if user already has TOTP enrolled
       const { data: factors } = await supabase.auth.mfa.listFactors();

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound, ShieldCheck } from "lucide-react";
+import { UserPlus, KeyRound } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -17,6 +17,7 @@ interface AdminUser {
   full_name: string | null;
   created_at: string;
   role: string;
+  require_2fa: boolean;
 }
 
 const UsersManagement = () => {
@@ -31,8 +32,6 @@ const UsersManagement = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
-  const [require2fa, setRequire2fa] = useState(false);
-  const [toggling2fa, setToggling2fa] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -40,7 +39,7 @@ const UsersManagement = () => {
 
     const merged = (profiles || []).map((p) => {
       const userRole = (roles || []).find((r) => r.user_id === p.user_id);
-      return { id: p.user_id, email: p.email, full_name: p.full_name, created_at: p.created_at, role: userRole?.role || "none" };
+      return { id: p.user_id, email: p.email, full_name: p.full_name, created_at: p.created_at, role: userRole?.role || "none", require_2fa: (p as any).require_2fa ?? false };
     });
 
     setUsers(merged);
@@ -49,32 +48,19 @@ const UsersManagement = () => {
 
   useEffect(() => {
     fetchUsers();
-    fetch2faSetting();
   }, []);
 
-  const fetch2faSetting = async () => {
-    const { data } = await supabase
-      .from("app_settings")
-      .select("require_2fa")
-      .limit(1)
-      .maybeSingle();
-    if (data) setRequire2fa(data.require_2fa);
-  };
-
-  const toggle2fa = async (checked: boolean) => {
-    setToggling2fa(true);
+  const toggleUser2fa = async (userId: string, checked: boolean) => {
     try {
       const { error } = await supabase
-        .from("app_settings")
-        .update({ require_2fa: checked, updated_at: new Date().toISOString() })
-        .not("id", "is", null);
+        .from("profiles")
+        .update({ require_2fa: checked } as any)
+        .eq("user_id", userId);
       if (error) throw error;
-      setRequire2fa(checked);
-      toast.success(checked ? "2FA required for all users" : "2FA requirement disabled");
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, require_2fa: checked } : u));
+      toast.success(checked ? "2FA enabled for user" : "2FA disabled for user");
     } catch (err: any) {
       toast.error(err.message || "Failed to update 2FA setting");
-    } finally {
-      setToggling2fa(false);
     }
   };
 
@@ -122,18 +108,6 @@ const UsersManagement = () => {
 
   return (
     <div>
-      {isSuperAdmin && (
-        <div className="flex items-center justify-between mb-4 p-4 rounded-lg border bg-card">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Require 2FA for all users</p>
-              <p className="text-xs text-muted-foreground">Users will be prompted to set up Google Authenticator on next login</p>
-            </div>
-          </div>
-          <Switch checked={require2fa} onCheckedChange={toggle2fa} disabled={toggling2fa} />
-        </div>
-      )}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">User Management</h2>
         {isSuperAdmin && (
@@ -171,13 +145,14 @@ const UsersManagement = () => {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              {isSuperAdmin && <TableHead className="text-center">2FA</TableHead>}
               <TableHead>Joined</TableHead>
               {isSuperAdmin && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={isSuperAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isSuperAdmin ? 6 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
@@ -185,6 +160,14 @@ const UsersManagement = () => {
                 <TableCell>
                   <Badge variant={u.role === "super_admin" ? "default" : "secondary"}>{u.role}</Badge>
                 </TableCell>
+                {isSuperAdmin && (
+                  <TableCell className="text-center">
+                    <Switch
+                      checked={u.require_2fa}
+                      onCheckedChange={(checked) => toggleUser2fa(u.id, checked)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="text-sm">{new Date(u.created_at).toLocaleDateString()}</TableCell>
                 {isSuperAdmin && (
                   <TableCell>
