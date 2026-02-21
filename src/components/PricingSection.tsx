@@ -11,6 +11,15 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 const packages = [
   {
@@ -53,20 +62,37 @@ const features = [
 
 const PricingSection = () => {
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
+  const [selectedPkg, setSelectedPkg] = useState<typeof packages[0] | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
-  const handleSignUp = async (pkg: typeof packages[0]) => {
-    setLoadingPkg(pkg.name);
+  const handleSignUp = (pkg: typeof packages[0]) => {
+    setSelectedPkg(pkg);
+    setCustomerName("");
+    setCustomerEmail("");
+    setCustomerPhone("");
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPkg) return;
+
+    setLoadingPkg(selectedPkg.name);
     try {
       const { data, error } = await supabase.functions.invoke("create-yoco-checkout", {
         body: {
-          packageName: pkg.name,
-          amount: pkg.amountCents,
+          packageName: selectedPkg.name,
+          amount: selectedPkg.amountCents,
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          customerPhone: customerPhone.trim(),
           lineItems: [
             {
-              displayName: pkg.name,
+              displayName: selectedPkg.name,
               quantity: 1,
-              pricingDetails: { price: pkg.amountCents },
-              description: pkg.unit,
+              pricingDetails: { price: selectedPkg.amountCents },
+              description: selectedPkg.unit,
             },
           ],
         },
@@ -83,6 +109,7 @@ const PricingSection = () => {
       toast.error("Could not start checkout. Please try again.");
     } finally {
       setLoadingPkg(null);
+      setSelectedPkg(null);
     }
   };
 
@@ -169,6 +196,35 @@ const PricingSection = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Customer info dialog */}
+      <Dialog open={!!selectedPkg} onOpenChange={(open) => !open && setSelectedPkg(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Your Details</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">
+            Please provide your details before proceeding to payment for <span className="font-semibold text-foreground">{selectedPkg?.name}</span>.
+          </p>
+          <form onSubmit={handleCheckout} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer-name">Full Name *</Label>
+              <Input id="customer-name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer-email">Email *</Label>
+              <Input id="customer-email" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="john@example.com" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer-phone">Phone</Label>
+              <Input id="customer-phone" type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+27 82 123 4567" />
+            </div>
+            <Button type="submit" className="w-full" disabled={loadingPkg !== null}>
+              {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg?.price}`}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
