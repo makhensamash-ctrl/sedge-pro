@@ -15,9 +15,9 @@ serve(async (req) => {
   try {
     const { packageName, amount, lineItems, customerName, customerEmail, customerPhone } = await req.json();
 
-    const yocoKey = Deno.env.get("YOCO_SECRET_KEY");
+    const yocoKey = Deno.env.get("Yoco_Secret");
     if (!yocoKey) {
-      throw new Error("YOCO_SECRET_KEY not configured");
+      throw new Error("Yoco_Secret not configured");
     }
 
     const origin = req.headers.get("origin") || "https://sedge-pro.lovable.app";
