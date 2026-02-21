@@ -73,7 +73,7 @@ const UsersManagement = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Admin account created! Default password: !Sedge2026");
+      toast.success("Admin account created! They will receive a default password set by the system.");
       setOpen(false);
       setInviteEmail("");
       setInviteName("");
@@ -128,7 +128,7 @@ const UsersManagement = () => {
                   <Label>Email</Label>
                   <Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required />
                 </div>
-                <p className="text-sm text-muted-foreground">Default password: <strong>!Sedge2026</strong> — user will be prompted to change on first login.</p>
+                <p className="text-sm text-muted-foreground">A default password (configured securely in the cloud) will be assigned — user will be prompted to change on first login.</p>
                 <Button type="submit" className="w-full" disabled={inviting}>
                   {inviting ? "Creating..." : "Create Admin"}
                 </Button>

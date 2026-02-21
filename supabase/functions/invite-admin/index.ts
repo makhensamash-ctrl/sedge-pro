@@ -53,7 +53,7 @@ serve(async (req) => {
     // Default: create admin
     if (!email) throw new Error("Email is required");
 
-    const defaultPassword = password || "!Sedge2026";
+    const defaultPassword = password || Deno.env.get("DEFAULT_ADMIN_PASSWORD") || "ChangeMe123!";
 
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,

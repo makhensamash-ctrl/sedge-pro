@@ -69,8 +69,21 @@ serve(async (req) => {
       metadata: { customerName, customerPhone },
     });
 
-    // Move existing lead to Won or create a new one
-    const WON_STAGE_ID = "18e1a981-a58e-4185-bb0f-e192c78a8e9e";
+    // Move existing lead to Won or create a new one – look up stage dynamically
+    const { data: wonStage } = await supabaseAdmin
+      .from("pipeline_stages")
+      .select("id")
+      .eq("name", "Won")
+      .maybeSingle();
+
+    if (!wonStage) {
+      console.error("Won stage not found in pipeline_stages");
+      return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const WON_STAGE_ID = wonStage.id;
 
     // Check for existing lead by email
     let existingLead = null;
