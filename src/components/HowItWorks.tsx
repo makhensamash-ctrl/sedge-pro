@@ -12,7 +12,7 @@ const steps = [
     icon: FolderSync,
     num: "02",
     title: "Organize",
-    desc: "System automates compliance and sorting instantly.",
+    desc: "System analyses, creates and files reports.",
   },
   {
     icon: LayoutDashboard,
