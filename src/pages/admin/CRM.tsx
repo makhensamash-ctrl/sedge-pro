@@ -69,6 +69,23 @@ const CRM = () => {
     fetchStages();
     fetchLeads();
     fetchAdminMap();
+
+    // Realtime subscription for leads
+    const channel = supabase
+      .channel("crm-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads" },
+        () => { fetchLeads(); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lead_comments" },
+        () => { /* handled in LeadDetailDialog */ }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [fetchStages, fetchLeads, fetchAdminMap]);
 
   const handleAddLead = (stageId: string) => {
