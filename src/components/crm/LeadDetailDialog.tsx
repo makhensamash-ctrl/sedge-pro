@@ -47,6 +47,28 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onAssign }: LeadDetailDial
     if (!open) return;
     fetchAdmins();
     if (lead) fetchComments(lead.id);
+
+    // Realtime subscription for comments on this lead
+    if (!lead) return;
+    const channel = supabase
+      .channel(`lead-comments-${lead.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "lead_comments", filter: `lead_id=eq.${lead.id}` },
+        (payload) => {
+          const newComment = payload.new as Comment;
+          // Avoid duplicating if we already added it optimistically
+          setComments((prev) => {
+            if (prev.some((c) => c.id === newComment.id)) return prev;
+            return [...prev, newComment];
+          });
+          // Enrich author info
+          fetchComments(lead.id);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [open, lead?.id]);
 
   useEffect(() => {
