@@ -2,3 +2,6 @@ project_id = "rqsqoyseotzpvmoeaydl"
 
 [functions.create-yoco-checkout]
 verify_jwt = false
+
+[functions.create-lead]
+verify_jwt = false
