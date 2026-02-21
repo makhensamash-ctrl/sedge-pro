@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound } from "lucide-react";
+import { UserPlus, KeyRound, ShieldCheck } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -30,6 +31,8 @@ const UsersManagement = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [require2fa, setRequire2fa] = useState(false);
+  const [toggling2fa, setToggling2fa] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -44,7 +47,36 @@ const UsersManagement = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+    fetch2faSetting();
+  }, []);
+
+  const fetch2faSetting = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("require_2fa")
+      .limit(1)
+      .maybeSingle();
+    if (data) setRequire2fa(data.require_2fa);
+  };
+
+  const toggle2fa = async (checked: boolean) => {
+    setToggling2fa(true);
+    try {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ require_2fa: checked, updated_at: new Date().toISOString() })
+        .not("id", "is", null);
+      if (error) throw error;
+      setRequire2fa(checked);
+      toast.success(checked ? "2FA required for all users" : "2FA requirement disabled");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update 2FA setting");
+    } finally {
+      setToggling2fa(false);
+    }
+  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +122,18 @@ const UsersManagement = () => {
 
   return (
     <div>
+      {isSuperAdmin && (
+        <div className="flex items-center justify-between mb-4 p-4 rounded-lg border bg-card">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Require 2FA for all users</p>
+              <p className="text-xs text-muted-foreground">Users will be prompted to set up Google Authenticator on next login</p>
+            </div>
+          </div>
+          <Switch checked={require2fa} onCheckedChange={toggle2fa} disabled={toggling2fa} />
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">User Management</h2>
         {isSuperAdmin && (

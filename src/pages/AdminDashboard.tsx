@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import MfaSetupDialog from "@/components/MfaSetupDialog";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
@@ -18,12 +20,39 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [mustSetupMfa, setMustSetupMfa] = useState(false);
 
   useEffect(() => {
     if (user?.user_metadata?.must_change_password) {
       setMustChangePassword(true);
     }
   }, [user]);
+
+  // Check if 2FA is required but not enrolled
+  useEffect(() => {
+    if (!user || mustChangePassword) return;
+
+    const check2fa = async () => {
+      // Check if org requires 2FA
+      const { data: settings } = await supabase
+        .from("app_settings")
+        .select("require_2fa")
+        .limit(1)
+        .maybeSingle();
+
+      if (!settings?.require_2fa) return;
+
+      // Check if user already has TOTP enrolled
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const hasVerifiedTotp = factors?.totp?.some((f) => f.status === "verified");
+
+      if (!hasVerifiedTotp) {
+        setMustSetupMfa(true);
+      }
+    };
+
+    check2fa();
+  }, [user, mustChangePassword]);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -44,6 +73,8 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen flex bg-secondary">
       <ChangePasswordDialog open={mustChangePassword} onSuccess={() => setMustChangePassword(false)} />
+      <MfaSetupDialog open={mustSetupMfa && !mustChangePassword} onSuccess={() => setMustSetupMfa(false)} />
+
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-lg font-bold text-sidebar-primary">SedgePro Admin</h1>
@@ -81,7 +112,6 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 p-8 overflow-auto">
         <Outlet />
       </main>
