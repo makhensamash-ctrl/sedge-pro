@@ -3,6 +3,7 @@ import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
@@ -16,6 +17,13 @@ const AdminDashboard = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+
+  useEffect(() => {
+    if (user?.user_metadata?.must_change_password) {
+      setMustChangePassword(true);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -35,7 +43,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen flex bg-secondary">
-      {/* Sidebar */}
+      <ChangePasswordDialog open={mustChangePassword} onSuccess={() => setMustChangePassword(false)} />
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-lg font-bold text-sidebar-primary">SedgePro Admin</h1>

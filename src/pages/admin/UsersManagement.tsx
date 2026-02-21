@@ -29,7 +29,6 @@ const UsersManagement = () => {
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [invitePassword, setInvitePassword] = useState("");
   const [inviting, setInviting] = useState(false);
 
   const fetchUsers = async () => {
@@ -52,15 +51,14 @@ const UsersManagement = () => {
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-admin", {
-        body: { email: inviteEmail, password: invitePassword, fullName: inviteName },
+        body: { email: inviteEmail, fullName: inviteName },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Admin account created!");
+      toast.success("Admin account created! Default password: !Sedge2026");
       setOpen(false);
       setInviteEmail("");
       setInviteName("");
-      setInvitePassword("");
       fetchUsers();
     } catch (err: any) {
       toast.error(err.message || "Failed to create admin");
@@ -112,10 +110,7 @@ const UsersManagement = () => {
                   <Label>Email</Label>
                   <Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required />
                 </div>
-                <div className="space-y-2">
-                  <Label>Password</Label>
-                  <Input type="password" value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} required minLength={6} />
-                </div>
+                <p className="text-sm text-muted-foreground">Default password: <strong>!Sedge2026</strong> — user will be prompted to change on first login.</p>
                 <Button type="submit" className="w-full" disabled={inviting}>
                   {inviting ? "Creating..." : "Create Admin"}
                 </Button>
