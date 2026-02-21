@@ -12,35 +12,50 @@ export function useAuth() {
   const [state, setState] = useState<AuthState>({ user: null, role: null, loading: true });
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    let mounted = true;
+
+    const fetchRole = (userId: string) => {
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (mounted) {
+            setState((prev) => ({ ...prev, role: data?.role ?? null, loading: false }));
+          }
+        });
+    };
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       const user = session?.user ?? null;
+      setState((prev) => ({ ...prev, user }));
       if (user) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setState({ user, role: data?.role ?? null, loading: false });
+        fetchRole(user.id);
       } else {
         setState({ user: null, role: null, loading: false });
       }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Listen for auth changes — never await inside this callback
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       const user = session?.user ?? null;
+      setState((prev) => ({ ...prev, user }));
       if (user) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setState({ user, role: data?.role ?? null, loading: false });
+        // Use setTimeout to avoid deadlock
+        setTimeout(() => fetchRole(user.id), 0);
       } else {
         setState({ user: null, role: null, loading: false });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
