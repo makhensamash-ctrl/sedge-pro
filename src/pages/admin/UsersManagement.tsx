@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus, KeyRound } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -23,6 +23,10 @@ const UsersManagement = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
@@ -62,6 +66,27 @@ const UsersManagement = () => {
       toast.error(err.message || "Failed to create admin");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    setUpdatingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: { action: "update-password", userId: selectedUser.id, password: newPassword },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Password updated for ${selectedUser.email}`);
+      setPasswordOpen(false);
+      setNewPassword("");
+      setSelectedUser(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update password");
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -108,11 +133,12 @@ const UsersManagement = () => {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Joined</TableHead>
+              {isSuperAdmin && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isSuperAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
             ) : users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
@@ -121,11 +147,44 @@ const UsersManagement = () => {
                   <Badge variant={u.role === "super_admin" ? "default" : "secondary"}>{u.role}</Badge>
                 </TableCell>
                 <TableCell className="text-sm">{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                {isSuperAdmin && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSelectedUser(u); setPasswordOpen(true); }}
+                    >
+                      <KeyRound className="w-4 h-4 mr-1" />
+                      Reset Password
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={passwordOpen} onOpenChange={(v) => { setPasswordOpen(v); if (!v) { setNewPassword(""); setSelectedUser(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">
+            Set a new password for <strong>{selectedUser?.email}</strong>
+          </p>
+          <form onSubmit={handlePasswordUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" />
+            </div>
+            <Button type="submit" className="w-full" disabled={updatingPassword}>
+              {updatingPassword ? "Updating..." : "Update Password"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
