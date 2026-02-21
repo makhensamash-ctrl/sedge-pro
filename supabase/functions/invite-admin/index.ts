@@ -51,13 +51,15 @@ serve(async (req) => {
     }
 
     // Default: create admin
-    if (!email || !password) throw new Error("Email and password are required");
+    if (!email) throw new Error("Email is required");
+
+    const defaultPassword = password || "!Sedge2026";
 
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
+      password: defaultPassword,
       email_confirm: true,
-      user_metadata: { full_name: fullName || "" },
+      user_metadata: { full_name: fullName || "", must_change_password: true },
     });
 
     if (createError) throw createError;
