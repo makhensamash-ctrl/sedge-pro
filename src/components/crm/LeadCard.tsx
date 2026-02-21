@@ -1,7 +1,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Phone, Mail, Globe, GripVertical, Pencil, Trash2, UserCircle } from "lucide-react";
+import { Phone, Mail, Globe, GripVertical, Pencil, Trash2, UserCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export interface Lead {
   id: string;
@@ -14,6 +15,7 @@ export interface Lead {
   notes: string | null;
   created_at: string;
   assigned_to: string | null;
+  package: string | null;
 }
 
 interface LeadCardProps {
@@ -82,6 +84,11 @@ const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCa
               <span className="truncate">{assigneeName}</span>
             </div>
           )}
+          <div className="mt-1.5">
+            <Badge variant={lead.package ? "default" : "outline"} className="text-[10px] px-1.5 py-0">
+              {lead.package || "Unassigned"}
+            </Badge>
+          </div>
         </div>
         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
