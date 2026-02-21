@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { packageName, amount, lineItems } = await req.json();
+    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone } = await req.json();
 
     const yocoKey = Deno.env.get("YOCO_SECRET_KEY");
     if (!yocoKey) {
@@ -27,7 +28,7 @@ serve(async (req) => {
       successUrl: `${origin}/payment/success`,
       cancelUrl: `${origin}/payment/failed`,
       failureUrl: `${origin}/payment/failed`,
-      metadata: { packageName },
+      metadata: { packageName, customerName, customerEmail, customerPhone },
     };
 
     if (lineItems) {
@@ -52,6 +53,21 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Store payment record with customer info
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    await supabaseAdmin.from("payments").insert({
+      checkout_id: data.id,
+      package_name: packageName,
+      amount_cents: amount,
+      customer_email: customerEmail || null,
+      status: "created",
+      metadata: { customerName, customerPhone },
+    });
 
     return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
