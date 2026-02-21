@@ -24,9 +24,9 @@ serve(async (req) => {
     const body: Record<string, unknown> = {
       amount,
       currency: "ZAR",
-      successUrl: `${origin}/?payment=success`,
-      cancelUrl: `${origin}/?payment=cancelled`,
-      failureUrl: `${origin}/?payment=failed`,
+      successUrl: `${origin}/payment/success`,
+      cancelUrl: `${origin}/payment/failed`,
+      failureUrl: `${origin}/payment/failed`,
       metadata: { packageName },
     };
 
