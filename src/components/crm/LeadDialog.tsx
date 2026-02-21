@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,22 +21,23 @@ interface LeadDialogProps {
 const leadSources = ["Website", "Referral", "Social Media", "Cold Call", "Email Campaign", "Walk-in", "Tender", "Other"];
 
 const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving }: LeadDialogProps) => {
-  const [clientName, setClientName] = useState(lead?.client_name || "");
-  const [phone, setPhone] = useState(lead?.phone || "");
-  const [email, setEmail] = useState(lead?.email || "");
-  const [source, setSource] = useState(lead?.source || "");
-  const [notes, setNotes] = useState(lead?.notes || "");
-  const [selectedStage, setSelectedStage] = useState(lead?.stage_id || stageId);
+  const [clientName, setClientName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [source, setSource] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedStage, setSelectedStage] = useState("");
 
-  // Reset form when lead changes
-  useState(() => {
-    setClientName(lead?.client_name || "");
-    setPhone(lead?.phone || "");
-    setEmail(lead?.email || "");
-    setSource(lead?.source || "");
-    setNotes(lead?.notes || "");
-    setSelectedStage(lead?.stage_id || stageId);
-  });
+  useEffect(() => {
+    if (open) {
+      setClientName(lead?.client_name || "");
+      setPhone(lead?.phone || "");
+      setEmail(lead?.email || "");
+      setSource(lead?.source || "");
+      setNotes(lead?.notes || "");
+      setSelectedStage(lead?.stage_id || stageId);
+    }
+  }, [open, lead, stageId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
