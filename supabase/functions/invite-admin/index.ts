@@ -34,12 +34,25 @@ serve(async (req) => {
       .eq("role", "super_admin")
       .maybeSingle();
 
-    if (!callerRole) throw new Error("Only super admins can create admin accounts");
+    if (!callerRole) throw new Error("Only super admins can perform this action");
 
-    const { email, password, fullName } = await req.json();
+    const { action, email, password, fullName, userId } = await req.json();
+
+    if (action === "update-password") {
+      if (!userId || !password) throw new Error("User ID and password are required");
+      if (password.length < 6) throw new Error("Password must be at least 6 characters");
+
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: create admin
     if (!email || !password) throw new Error("Email and password are required");
 
-    // Create user with admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -49,7 +62,6 @@ serve(async (req) => {
 
     if (createError) throw createError;
 
-    // Assign admin role
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: newUser.user.id, role: "admin" });
