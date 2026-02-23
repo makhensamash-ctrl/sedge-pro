@@ -9,6 +9,7 @@ const Analytics = () => {
   const [chartData, setChartData] = useState<{ name: string; revenue: number; count: number }[]>([]);
   const [leadsByPackage, setLeadsByPackage] = useState<{ name: string; count: number }[]>([]);
   const [leadsBySource, setLeadsBySource] = useState<{ name: string; count: number }[]>([]);
+  const [leadsByStage, setLeadsByStage] = useState<{ name: string; count: number; color: string }[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
 
   useEffect(() => {
@@ -27,9 +28,18 @@ const Analytics = () => {
     };
 
     const fetchLeads = async () => {
-      const { data: leads } = await supabase.from("leads").select("package, source");
+      const { data: leads } = await supabase.from("leads").select("package, source, stage_id");
+      const { data: stages } = await supabase.from("pipeline_stages").select("id, name, color, position").order("position");
       if (!leads) return;
       setTotalLeads(leads.length);
+
+      // By stage
+      if (stages) {
+        const stageMap: Record<string, { name: string; count: number; color: string }> = {};
+        stages.forEach((s) => { stageMap[s.id] = { name: s.name, count: 0, color: s.color }; });
+        leads.forEach((l) => { if (stageMap[l.stage_id]) stageMap[l.stage_id].count += 1; });
+        setLeadsByStage(stages.map((s) => stageMap[s.id]));
+      }
 
       // By package
       const pkgMap: Record<string, number> = {};
@@ -77,6 +87,32 @@ const Analytics = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Leads by Stage */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Leads by Pipeline Stage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {leadsByStage.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">No stage data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={leadsByStage}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {leadsByStage.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Leads by Package */}
