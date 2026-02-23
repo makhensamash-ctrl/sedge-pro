@@ -50,6 +50,36 @@ serve(async (req) => {
       });
     }
 
+    if (action === "reset-all-passwords") {
+      const defaultPwd = Deno.env.get("DEFAULT_ADMIN_PASSWORD") || "ChangeMe123!";
+
+      // Get all admin/super_admin user IDs
+      const { data: allRoles } = await supabaseAdmin.from("user_roles").select("user_id, role");
+      if (!allRoles || allRoles.length === 0) {
+        return new Response(JSON.stringify({ success: true, updated: 0 }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let updated = 0;
+      const errors: string[] = [];
+      for (const role of allRoles) {
+        try {
+          await supabaseAdmin.auth.admin.updateUserById(role.user_id, {
+            password: defaultPwd,
+            user_metadata: { must_change_password: true },
+          });
+          updated++;
+        } catch (e) {
+          errors.push(`${role.user_id}: ${e.message}`);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, updated, errors }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Default: create admin
     if (!email) throw new Error("Email is required");
 
