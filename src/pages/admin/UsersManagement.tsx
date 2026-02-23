@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound } from "lucide-react";
+import { UserPlus, KeyRound, RotateCcw } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -32,6 +32,7 @@ const UsersManagement = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [resettingAll, setResettingAll] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -106,11 +107,29 @@ const UsersManagement = () => {
     }
   };
 
+  const handleResetAll = async () => {
+    if (!confirm("Reset ALL admin passwords to the default? Each user will be prompted to change their password on next login.")) return;
+    setResettingAll(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: { action: "reset-all-passwords" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Passwords reset for ${data.updated} user(s). They will be prompted to change on next login.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset passwords");
+    } finally {
+      setResettingAll(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">User Management</h2>
         {isSuperAdmin && (
+          <div className="flex gap-2">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><UserPlus className="w-4 h-4 mr-2" />Create Admin</Button>
@@ -134,7 +153,12 @@ const UsersManagement = () => {
                 </Button>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+            <Button variant="outline" onClick={handleResetAll} disabled={resettingAll}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              {resettingAll ? "Resetting..." : "Reset All Passwords"}
+            </Button>
+          </div>
         )}
       </div>
 
