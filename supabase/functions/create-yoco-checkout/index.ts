@@ -65,7 +65,7 @@ serve(async (req) => {
       package_name: packageName,
       amount_cents: amount,
       customer_email: customerEmail || null,
-      status: "completed",
+      status: "created",
       metadata: { customerName, customerPhone },
     });
 
