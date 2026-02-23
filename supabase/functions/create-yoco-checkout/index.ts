@@ -69,74 +69,8 @@ serve(async (req) => {
       metadata: { customerName, customerPhone },
     });
 
-    // Move existing lead to Won or create a new one – look up stage dynamically
-    const { data: wonStage } = await supabaseAdmin
-      .from("pipeline_stages")
-      .select("id")
-      .eq("name", "Won")
-      .maybeSingle();
-
-    if (!wonStage) {
-      console.error("Won stage not found in pipeline_stages");
-      return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const WON_STAGE_ID = wonStage.id;
-
-    // Check for existing lead by email
-    let existingLead = null;
-    if (customerEmail) {
-      const { data: found } = await supabaseAdmin
-        .from("leads")
-        .select("id, stage_id")
-        .eq("email", customerEmail)
-        .limit(1)
-        .maybeSingle();
-      existingLead = found;
-    }
-
-    if (existingLead) {
-      // Move existing lead to Won stage and update details
-      const { data: lastLead } = await supabaseAdmin
-        .from("leads")
-        .select("position")
-        .eq("stage_id", WON_STAGE_ID)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      await supabaseAdmin.from("leads").update({
-        stage_id: WON_STAGE_ID,
-        position: (lastLead?.position ?? -1) + 1,
-        package: packageName,
-        source: "Website",
-        notes: `Payment completed – ${packageName} (R${(amount / 100).toLocaleString()})`,
-        phone: customerPhone || undefined,
-        client_name: customerName || undefined,
-      }).eq("id", existingLead.id);
-    } else {
-      // Create new lead in Won stage
-      const { data: lastLead } = await supabaseAdmin
-        .from("leads")
-        .select("position")
-        .eq("stage_id", WON_STAGE_ID)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      await supabaseAdmin.from("leads").insert({
-        client_name: customerName || customerEmail || "Unknown",
-        email: customerEmail || null,
-        phone: customerPhone || null,
-        source: "Website",
-        package: packageName,
-        stage_id: WON_STAGE_ID,
-        position: (lastLead?.position ?? -1) + 1,
-        notes: `Payment completed – ${packageName} (R${(amount / 100).toLocaleString()})`,
-      });
-    }
+    // Lead creation is now handled by the yoco-webhook function
+    // after payment is confirmed by Yoco
 
     return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
