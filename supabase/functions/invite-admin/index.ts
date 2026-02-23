@@ -55,22 +55,44 @@ serve(async (req) => {
 
     const defaultPassword = password || Deno.env.get("DEFAULT_ADMIN_PASSWORD") || "ChangeMe123!";
 
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: defaultPassword,
-      email_confirm: true,
-      user_metadata: { full_name: fullName || "", must_change_password: true },
-    });
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find((u) => u.email === email);
 
-    if (createError) throw createError;
+    let targetUserId: string;
 
-    const { error: roleError } = await supabaseAdmin
+    if (existingUser) {
+      targetUserId = existingUser.id;
+      // Update metadata if needed
+      await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+        user_metadata: { full_name: fullName || existingUser.user_metadata?.full_name || "" },
+      });
+    } else {
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: defaultPassword,
+        email_confirm: true,
+        user_metadata: { full_name: fullName || "", must_change_password: true },
+      });
+      if (createError) throw createError;
+      targetUserId = newUser.user.id;
+    }
+
+    // Upsert role (avoid duplicate error)
+    const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role: "admin" });
+      .select("id")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
 
-    if (roleError) throw roleError;
+    if (!existingRole) {
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: targetUserId, role: "admin" });
+      if (roleError) throw roleError;
+    }
 
-    return new Response(JSON.stringify({ success: true, userId: newUser.user.id }), {
+    return new Response(JSON.stringify({ success: true, userId: targetUserId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
