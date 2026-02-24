@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, CheckCircle } from "lucide-react";
+import { MessageCircle, X, Send, CheckCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 const quickOptions = [
   "I need more information",
@@ -8,7 +9,7 @@ const quickOptions = [
   "I need to request a trial",
 ];
 
-type Step = "options" | "details" | "done";
+type Step = "options" | "details" | "submitting" | "done";
 
 const ChatBubble = () => {
   const [open, setOpen] = useState(false);
@@ -55,8 +56,23 @@ const ChatBubble = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validate()) setStep("done");
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setStep("submitting");
+    try {
+      await supabase.functions.invoke("create-lead", {
+        body: {
+          client_name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          source: "Website Chat",
+          notes: selected || "",
+        },
+      });
+    } catch {
+      // Silently fail — lead capture is best-effort
+    }
+    setStep("done");
   };
 
   return (
@@ -151,6 +167,12 @@ const ChatBubble = () => {
                   >
                     Submit
                   </button>
+                </div>
+              )}
+
+              {step === "submitting" && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-accent" />
                 </div>
               )}
 
