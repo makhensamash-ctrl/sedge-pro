@@ -1,8 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Phone, Mail, Globe, GripVertical, Pencil, Trash2, UserCircle, Package } from "lucide-react";
+import { Phone, Mail, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export interface Lead {
   id: string;
@@ -27,6 +28,21 @@ interface LeadCardProps {
   assigneeName?: string | null;
 }
 
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const packageColors: Record<string, string> = {
+  "Certificates & Invoicing": "bg-blue-500/10 text-blue-700 border-blue-200",
+  "Profitability Management": "bg-emerald-500/10 text-emerald-700 border-emerald-200",
+  "Project Collaboration Service": "bg-violet-500/10 text-violet-700 border-violet-200",
+};
+
 const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCardProps) => {
   const {
     attributes,
@@ -40,62 +56,84 @@ const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCa
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
+
+  const pkgClass = lead.package ? packageColors[lead.package] || "bg-muted text-muted-foreground" : "";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-card border border-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
+      className="bg-card border border-border rounded-xl p-3.5 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-200 group cursor-pointer relative"
       onClick={() => onOpenDetail(lead)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing mt-1 text-muted-foreground/40 hover:text-muted-foreground"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-foreground truncate">{lead.client_name}</h4>
-          {lead.phone && (
-            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
-              <Phone className="w-3 h-3 shrink-0" />
-              <span className="truncate">{lead.phone}</span>
-            </div>
-          )}
-          {lead.email && (
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <Mail className="w-3 h-3 shrink-0" />
-              <span className="truncate">{lead.email}</span>
-            </div>
-          )}
-          {lead.source && (
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <Globe className="w-3 h-3 shrink-0" />
-              <span className="truncate">{lead.source}</span>
-            </div>
-          )}
-          {assigneeName && (
-            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-primary/80">
-              <UserCircle className="w-3 h-3 shrink-0" />
-              <span className="truncate">{assigneeName}</span>
-            </div>
-          )}
-          <div className="mt-1.5">
-            <Badge variant={lead.package ? "default" : "outline"} className="text-[10px] px-1.5 py-0">
-              {lead.package || "Unassigned"}
-            </Badge>
+      {/* Drag handle — top-left subtle dots */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 left-1.5 cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-muted-foreground/60 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </div>
+
+      {/* Top row: name + assignee avatar */}
+      <div className="flex items-start justify-between gap-2 ml-4">
+        <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
+          {lead.client_name}
+        </h4>
+        {assigneeName && (
+          <Avatar className="h-7 w-7 shrink-0 ring-2 ring-background shadow-sm">
+            <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
+              {getInitials(assigneeName)}
+            </AvatarFallback>
+          </Avatar>
+        )}
+      </div>
+
+      {/* Contact info */}
+      <div className="mt-2.5 ml-4 space-y-1">
+        {lead.email && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Mail className="w-3 h-3 shrink-0 text-muted-foreground/60" />
+            <span className="truncate">{lead.email}</span>
           </div>
-        </div>
-        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
+        )}
+        {lead.phone && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Phone className="w-3 h-3 shrink-0 text-muted-foreground/60" />
+            <span className="truncate">{lead.phone}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer: package badge + actions */}
+      <div className="flex items-center justify-between mt-3 ml-4">
+        <Badge
+          variant="outline"
+          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            lead.package ? pkgClass : "bg-muted/50 text-muted-foreground border-border"
+          }`}
+        >
+          {lead.package || "No package"}
+        </Badge>
+
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded-full hover:bg-muted"
+            onClick={(e) => { e.stopPropagation(); onEdit(lead); }}
+          >
             <Pencil className="w-3 h-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded-full hover:bg-destructive/10 text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
+          >
             <Trash2 className="w-3 h-3" />
           </Button>
         </div>
