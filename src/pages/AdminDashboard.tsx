@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLeadNotifications } from "@/hooks/useLeadNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ const AdminDashboard = () => {
   const location = useLocation();
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [mustSetupMfa, setMustSetupMfa] = useState(false);
+
+  useLeadNotifications(user?.id);
 
   useEffect(() => {
     if (user?.user_metadata?.must_change_password) {
