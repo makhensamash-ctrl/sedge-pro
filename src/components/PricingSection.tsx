@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const packages = [
   {
@@ -66,12 +68,20 @@ const PricingSection = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [heardAbout, setHeardAbout] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [regNumber, setRegNumber] = useState("");
+  const [billingAddress, setBillingAddress] = useState("");
 
   const handleSignUp = (pkg: typeof packages[0]) => {
     setSelectedPkg(pkg);
     setCustomerName("");
     setCustomerEmail("");
     setCustomerPhone("");
+    setHeardAbout("");
+    setBusinessName("");
+    setRegNumber("");
+    setBillingAddress("");
   };
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -87,6 +97,10 @@ const PricingSection = () => {
           customerName: customerName.trim(),
           customerEmail: customerEmail.trim(),
           customerPhone: customerPhone.trim(),
+          heardAbout: heardAbout.trim(),
+          businessName: businessName.trim(),
+          regNumber: regNumber.trim(),
+          billingAddress: billingAddress.trim(),
           lineItems: [
             {
               displayName: selectedPkg.name,
@@ -206,7 +220,7 @@ const PricingSection = () => {
           <p className="text-sm text-muted-foreground mb-2">
             Please provide your details before proceeding to payment for <span className="font-semibold text-foreground">{selectedPkg?.name}</span>.
           </p>
-          <form onSubmit={handleCheckout} className="space-y-4">
+          <form onSubmit={handleCheckout} className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="customer-name">Full Name *</Label>
               <Input id="customer-name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" required />
@@ -219,7 +233,32 @@ const PricingSection = () => {
               <Label htmlFor="customer-phone">Phone</Label>
               <Input id="customer-phone" type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+27 82 123 4567" />
             </div>
-            <Button type="submit" className="w-full" disabled={loadingPkg !== null}>
+            <div className="space-y-2">
+              <Label htmlFor="business-name">Business Name *</Label>
+              <Input id="business-name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="My Construction Co." required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-number">Registration Number (if applicable)</Label>
+              <Input id="reg-number" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="2024/123456/07" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="billing-address">Billing Address *</Label>
+              <Textarea id="billing-address" value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} placeholder="123 Main Street, Sandton, 2196" required rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="heard-about">Where did you hear about us? *</Label>
+              <Select value={heardAbout} onValueChange={setHeardAbout} required>
+                <SelectTrigger id="heard-about">
+                  <SelectValue placeholder="Select an option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Google Search", "Social Media", "Referral", "Industry Event", "Word of Mouth", "Other"].map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full" disabled={loadingPkg !== null || !heardAbout}>
               {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg?.price}`}
             </Button>
           </form>
