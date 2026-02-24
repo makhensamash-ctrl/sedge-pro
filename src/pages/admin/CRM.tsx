@@ -299,7 +299,7 @@ const CRM = () => {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
           {sortedStages.map((stage) => (
             <PipelineColumn
               key={stage.id}
