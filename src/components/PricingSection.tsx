@@ -1,58 +1,46 @@
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
 const packages = [
   {
     name: "Certificates & Invoicing Services",
     price: "R2 997",
-    features: [
-      "Remove formula errors",
-      "Issue Tax Invoices in 1 min",
-      "Accurate Statements of Accounts",
-      "Track cash position",
-    ],
+    period: "for up to 5 projects",
   },
   {
-    name: "Profitability & Contracts Management",
+    name: "Profitability Management",
     price: "R9 997",
-    features: [
-      "Track planned vs actual profit",
-      "Stop profit leakages (theft/wastage)",
-      "Manage cashflow",
-      "Variation substantiation",
-    ],
-  },
-  {
-    name: "Contract Profitability Baseline Assessment",
-    price: "R14 997",
-    popular: true,
-    features: [
-      "Know contract profit margins",
-      "Optimise procurement & logistics",
-      "Plan delivery schedules",
-      "Working capital planning",
-    ],
-  },
-  {
-    name: "Commercial Baseline Risk Assessment",
-    price: "R24 997",
-    features: [
-      "Close financial gaps in BoQ",
-      "Identify missing payable items",
-      "Contractual claims opportunities",
-      "Comprehensive risk register",
-    ],
+    period: "for up to 3 projects",
   },
   {
     name: "Project Collaboration Service",
-    price: "R4 997",
-    features: [
-      "Access to collaboration software",
-      "Realtime project dashboard",
-      "Online workflows for approvals",
-      "Team performance reports",
-    ],
+    price: "R1 997",
+    period: "for up to 3 projects",
+    note: "Only available to those with existing packages",
   },
+];
+
+const features = [
+  { label: "Easy creation of payment certificates", plans: [true, false, false] },
+  { label: "Attach photos as evidence", plans: [true, false, false] },
+  { label: "Issue Tax Invoices and Statements of Accounts", plans: [true, false, false] },
+  { label: "Monitor cashflow", plans: [true, false, false] },
+  { label: "Track planned vs actual profit", plans: [false, true, false] },
+  { label: "Identify profit leakages", plans: [false, true, false] },
+  { label: "Manage cashflow", plans: [false, true, false] },
+  { label: "Expert advise", plans: [false, true, false] },
+  { label: "Realtime dashboards for clients and consultants", plans: [false, false, true] },
+  { label: "Submit and track approvals online", plans: [false, false, true] },
+  { label: "Receive, issue and record project communications online", plans: [false, false, true] },
+  { label: "Track compliance to response timelines", plans: [false, false, true] },
 ];
 
 const PricingSection = () => (
@@ -68,66 +56,73 @@ const PricingSection = () => (
           Contractor <span className="text-accent">Packages</span>
         </h2>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Choose the package that fits your project needs. All prices are per project.
+          Choose the package that fits your project needs.
         </p>
       </motion.div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {packages.map((pkg, i) => (
-          <motion.div
-            key={pkg.name}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`relative rounded-2xl p-6 flex flex-col border ${
-              pkg.popular
-                ? "border-accent bg-card shadow-lg ring-2 ring-accent/30"
-                : "border-border bg-card shadow-sm"
-            } hover:shadow-lg transition-shadow`}
-          >
-            {pkg.popular && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-bold px-4 py-1 rounded-full">
-                Popular
-              </span>
-            )}
-
-            <h3 className="text-base font-semibold text-primary mb-3 min-h-[48px]">
-              {pkg.name}
-            </h3>
-
-            <div className="mb-5">
-              <span className="text-xs text-muted-foreground">From</span>
-              <p className="text-2xl font-bold text-primary">
-                {pkg.price}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /project
-                </span>
-              </p>
-            </div>
-
-            <ul className="space-y-3 mb-6 flex-1">
-              {pkg.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                  <span>{f}</span>
-                </li>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
+      >
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-primary/5">
+              <TableHead className="min-w-[220px] text-primary font-semibold">
+                Features
+              </TableHead>
+              {packages.map((pkg) => (
+                <TableHead key={pkg.name} className="text-center min-w-[180px]">
+                  <div className="flex flex-col items-center gap-1 py-2">
+                    <span className="text-sm font-bold text-primary leading-tight">
+                      {pkg.name}
+                    </span>
+                    <span className="text-xl font-bold text-accent">{pkg.price}</span>
+                    <span className="text-xs text-muted-foreground">{pkg.period}</span>
+                    {pkg.note && (
+                      <span className="text-[10px] text-muted-foreground italic leading-tight max-w-[160px]">
+                        ({pkg.note})
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
               ))}
-            </ul>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {features.map((feature) => (
+              <TableRow key={feature.label}>
+                <TableCell className="text-sm text-foreground/80 font-medium">
+                  {feature.label}
+                </TableCell>
+                {feature.plans.map((included, i) => (
+                  <TableCell key={i} className="text-center">
+                    {included ? (
+                      <Check className="w-5 h-5 text-accent mx-auto" />
+                    ) : (
+                      <X className="w-4 h-4 text-muted-foreground/30 mx-auto" />
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-6 border-t border-border">
+          {packages.map((pkg) => (
             <a
+              key={pkg.name}
               href="#contact"
-              className={`block text-center py-2.5 rounded-full font-semibold text-sm transition-colors ${
-                pkg.popular
-                  ? "bg-accent text-accent-foreground hover:bg-green-dark"
-                  : "bg-primary text-primary-foreground hover:bg-navy-light"
-              }`}
+              className="inline-block text-center py-2.5 px-8 rounded-full font-semibold text-sm bg-accent text-accent-foreground hover:bg-green-dark transition-colors"
             >
-              Sign Up Now
+              Get {pkg.name.split(" ")[0]}
             </a>
-          </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   </section>
 );
