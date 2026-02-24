@@ -16,6 +16,7 @@ export interface Lead {
   created_at: string;
   assigned_to: string | null;
   package: string | null;
+  generated_by: string | null;
 }
 
 interface LeadCardProps {
