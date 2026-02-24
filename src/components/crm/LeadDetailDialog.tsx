@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, UserCircle } from "lucide-react";
+import { Send, UserCircle, Phone, Mail, Globe, FileText, Package, Calendar, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { Lead } from "./LeadCard";
@@ -166,6 +167,50 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onAssign }: LeadDetailDial
         <DialogHeader>
           <DialogTitle className="text-lg">{lead.client_name}</DialogTitle>
         </DialogHeader>
+
+        {/* Client Details */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pb-3 border-b border-border text-sm">
+          {lead.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{lead.email}</span>
+            </div>
+          )}
+          {lead.phone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{lead.phone}</span>
+            </div>
+          )}
+          {lead.source && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              <span>{lead.source}</span>
+            </div>
+          )}
+          {lead.generated_by && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>{lead.generated_by}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Package className="w-3.5 h-3.5 shrink-0" />
+            <Badge variant={lead.package ? "default" : "outline"} className="text-xs">
+              {lead.package || "Unassigned"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span>{format(new Date(lead.created_at), "dd MMM yyyy")}</span>
+          </div>
+          {lead.notes && (
+            <div className="col-span-2 flex items-start gap-2 text-muted-foreground mt-1">
+              <FileText className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <p className="text-foreground/80 whitespace-pre-wrap break-words">{lead.notes}</p>
+            </div>
+          )}
+        </div>
 
         {/* Assignment */}
         <div className="flex items-center gap-3 pb-3 border-b border-border">
