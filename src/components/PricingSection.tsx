@@ -5,52 +5,36 @@ const packages = [
   {
     name: "Certificates & Invoicing Services",
     price: "R2 997",
+    suffix: "for up to 5 projects",
     features: [
-      "Remove formula errors",
-      "Issue Tax Invoices in 1 min",
-      "Accurate Statements of Accounts",
-      "Track cash position",
+      "Easy creation of payment certificates",
+      "Attach photos as evidence",
+      "Issue Tax Invoices and Statements of Accounts",
+      "Monitor cashflow",
     ],
   },
   {
-    name: "Profitability & Contracts Management",
+    name: "Profitability Management",
     price: "R9 997",
-    features: [
-      "Track planned vs actual profit",
-      "Stop profit leakages (theft/wastage)",
-      "Manage cashflow",
-      "Variation substantiation",
-    ],
-  },
-  {
-    name: "Contract Profitability Baseline Assessment",
-    price: "R14 997",
+    suffix: "for up to 3 projects",
     popular: true,
     features: [
-      "Know contract profit margins",
-      "Optimise procurement & logistics",
-      "Plan delivery schedules",
-      "Working capital planning",
-    ],
-  },
-  {
-    name: "Commercial Baseline Risk Assessment",
-    price: "R24 997",
-    features: [
-      "Close financial gaps in BoQ",
-      "Identify missing payable items",
-      "Contractual claims opportunities",
-      "Comprehensive risk register",
+      "Track planned vs actual profit",
+      "Identify profit leakages",
+      "Manage cashflow",
+      "Expert advise",
     ],
   },
   {
     name: "Project Collaboration Service",
-    price: "R4 997",
+    price: "R1 997",
+    suffix: "for up to 3 projects",
+    note: "Only available to those with existing packages",
     features: [
-      "Access to collaboration software",
-      "Realtime project dashboard",
-      "Online workflows for approvals",
-      "Team performance reports",
+      "Realtime dashboards for clients and consultants",
+      "Submit and track approvals online",
+      "Receive, issue and record project communications online",
+      "Track compliance to response timelines",
     ],
   },
 ];
@@ -72,7 +56,7 @@ const PricingSection = () => (
         </p>
       </motion.div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
         {packages.map((pkg, i) => (
           <motion.div
             key={pkg.name}
@@ -80,7 +64,7 @@ const PricingSection = () => (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`relative rounded-2xl p-6 flex flex-col border ${
+            className={`relative rounded-2xl p-7 flex flex-col border ${
               pkg.popular
                 ? "border-accent bg-card shadow-lg ring-2 ring-accent/30"
                 : "border-border bg-card shadow-sm"
@@ -92,21 +76,26 @@ const PricingSection = () => (
               </span>
             )}
 
-            <h3 className="text-base font-semibold text-primary mb-3 min-h-[48px]">
+            <h3 className="text-lg font-semibold text-primary mb-3">
               {pkg.name}
             </h3>
 
-            <div className="mb-5">
-              <span className="text-xs text-muted-foreground">From</span>
-              <p className="text-2xl font-bold text-primary">
+            <div className="mb-2">
+              <p className="text-3xl font-bold text-primary">
                 {pkg.price}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /project
-                </span>
               </p>
+              <span className="text-sm text-muted-foreground">
+                {pkg.suffix}
+              </span>
             </div>
 
-            <ul className="space-y-3 mb-6 flex-1">
+            {pkg.note && (
+              <p className="text-xs text-muted-foreground italic mb-4">
+                {pkg.note}
+              </p>
+            )}
+
+            <ul className="space-y-3 mb-6 flex-1 mt-4">
               {pkg.features.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-foreground/80">
                   <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
