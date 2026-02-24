@@ -4,14 +4,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -30,6 +22,14 @@ const packages = [
     amountCents: 299700,
     unit: "for up to 5 projects",
     note: null,
+    features: [
+      "Easy creation of payment certificates",
+      "Attach photos as evidence",
+      "Issue Tax Invoices and Statements of Accounts",
+      "Monitor cashflow",
+      "Expert advise",
+      "Realtime dashboards for clients and consultants",
+    ],
   },
   {
     name: "Profitability Management",
@@ -37,6 +37,15 @@ const packages = [
     amountCents: 999700,
     unit: "for up to 3 projects",
     note: null,
+    popular: true,
+    features: [
+      "Track planned vs actual profit",
+      "Identify profit leakages",
+      "Manage cashflow",
+      "Expert advise",
+      "Realtime dashboards for clients and consultants",
+      "Monitor cashflow",
+    ],
   },
   {
     name: "Project Collaboration Service",
@@ -44,22 +53,14 @@ const packages = [
     amountCents: 199700,
     unit: "for up to 3 projects",
     note: "Only available to those with existing packages",
+    features: [
+      "Submit and track approvals online",
+      "Receive, issue and record project communications online",
+      "Track compliance to response timelines",
+      "Realtime dashboards for clients and consultants",
+      "Expert advise",
+    ],
   },
-];
-
-const features = [
-  { label: "Easy creation of payment certificates", plans: [true, true, true] },
-  { label: "Attach photos as evidence", plans: [true, true, true] },
-  { label: "Issue Tax Invoices and Statements of Accounts", plans: [true, true, true] },
-  { label: "Monitor cashflow", plans: [true, true, true] },
-  { label: "Track planned vs actual profit", plans: [true, true, true] },
-  { label: "Identify profit leakages", plans: [true, true, true] },
-  { label: "Manage cashflow", plans: [true, true, true] },
-  { label: "Expert advise", plans: [true, true, true] },
-  { label: "Realtime dashboards for clients and consultants", plans: [true, true, true] },
-  { label: "Submit and track approvals online", plans: [true, true, true] },
-  { label: "Receive, issue and record project communications online", plans: [true, true, true] },
-  { label: "Track compliance to response timelines", plans: [true, true, true] },
 ];
 
 const PricingSection = () => {
@@ -144,71 +145,58 @@ const PricingSection = () => {
           </p>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
-        >
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-primary/5">
-                <TableHead className="min-w-[200px] text-primary font-bold text-sm">
-                  Features
-                </TableHead>
-                {packages.map((pkg) => (
-                  <TableHead key={pkg.name} className="text-center min-w-[180px]">
-                    <div className="flex flex-col items-center gap-1 py-2">
-                      <span className="text-primary font-bold text-sm leading-tight">
-                        {pkg.name}
-                      </span>
-                      <span className="text-xl font-bold text-accent">{pkg.price}</span>
-                      <span className="text-xs text-muted-foreground">{pkg.unit}</span>
-                      {pkg.note && (
-                        <span className="text-[10px] text-muted-foreground italic leading-tight max-w-[160px]">
-                          ({pkg.note})
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {features.map((feat, i) => (
-                <TableRow key={feat.label} className={i % 2 === 0 ? "bg-muted/30" : ""}>
-                  <TableCell className="text-sm text-foreground/80 font-medium">
-                    {feat.label}
-                  </TableCell>
-                  {feat.plans.map((has, j) => (
-                    <TableCell key={j} className="text-center">
-                      {has && (
-                        <Check className="w-5 h-5 text-accent mx-auto" />
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {packages.map((pkg, i) => (
+            <motion.div
+              key={pkg.name}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+              className={`relative flex flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
+                pkg.popular ? "border-accent ring-2 ring-accent/20" : "border-border"
+              }`}
+            >
+              {pkg.popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-bold px-4 py-1 rounded-full">
+                  Most Popular
+                </span>
+              )}
 
-          {/* CTA row */}
-          <div className="grid grid-cols-4 border-t border-border">
-            <div />
-            {packages.map((pkg) => (
-              <div key={pkg.name} className="flex justify-center py-4">
-                <button
-                  onClick={() => handleSignUp(pkg)}
-                  disabled={loadingPkg !== null}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 px-6 py-2.5 rounded-full font-semibold text-sm transition-colors disabled:opacity-50"
-                >
-                  {loadingPkg === pkg.name ? "Loading..." : "Sign Up Now"}
-                </button>
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-bold text-primary mb-2 leading-tight min-h-[3.5rem] flex items-center justify-center">
+                  {pkg.name}
+                </h3>
+                <div className="text-3xl font-extrabold text-accent mb-1">{pkg.price}</div>
+                <span className="text-sm text-muted-foreground">{pkg.unit}</span>
+                {pkg.note && (
+                  <p className="text-xs text-muted-foreground italic mt-2">({pkg.note})</p>
+                )}
               </div>
-            ))}
-          </div>
-        </motion.div>
+
+              <ul className="space-y-3 mb-8 flex-1">
+                {pkg.features.map((feat) => (
+                  <li key={feat} className="flex items-start gap-2 text-sm text-foreground/80">
+                    <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                    <span>{feat}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                onClick={() => handleSignUp(pkg)}
+                disabled={loadingPkg !== null}
+                className={`w-full rounded-full font-semibold ${
+                  pkg.popular
+                    ? "bg-accent text-accent-foreground hover:bg-accent/90"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
+              >
+                {loadingPkg === pkg.name ? "Loading..." : "Sign Up Now"}
+              </Button>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       {/* Customer info dialog */}
