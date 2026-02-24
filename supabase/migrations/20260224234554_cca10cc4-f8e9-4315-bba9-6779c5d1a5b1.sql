@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD COLUMN generated_by text DEFAULT null;

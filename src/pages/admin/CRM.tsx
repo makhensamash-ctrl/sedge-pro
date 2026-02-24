@@ -113,7 +113,7 @@ const CRM = () => {
   };
 
   const handleSaveLead = async (
-    data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null },
+    data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null; generated_by: string | null },
     id?: string
   ) => {
     const saveData = { ...data, package: data.package === "none" ? null : data.package };
