@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone } = await req.json();
+    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress } = await req.json();
 
     const yocoKey = Deno.env.get("Yoco_Secret");
     if (!yocoKey) {
@@ -28,7 +28,7 @@ serve(async (req) => {
       successUrl: `${origin}/payment/success`,
       cancelUrl: `${origin}/payment/failed`,
       failureUrl: `${origin}/payment/failed`,
-      metadata: { packageName, customerName, customerEmail, customerPhone },
+      metadata: { packageName, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress },
     };
 
     if (lineItems) {
@@ -66,7 +66,7 @@ serve(async (req) => {
       amount_cents: amount,
       customer_email: customerEmail || null,
       status: "created",
-      metadata: { customerName, customerPhone },
+      metadata: { customerName, customerPhone, heardAbout, businessName, regNumber, billingAddress },
     });
 
     // Lead creation is now handled by the yoco-webhook function
