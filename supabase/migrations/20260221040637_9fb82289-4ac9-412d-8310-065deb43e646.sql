@@ -1,1 +1,0 @@
-ALTER TABLE public.leads ADD COLUMN package text DEFAULT NULL;

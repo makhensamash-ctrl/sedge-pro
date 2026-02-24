@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { Send, Mail, Phone, MapPin } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -16,9 +15,8 @@ const ContactSection = () => {
   const { toast } = useToast();
   const [form, setForm] = useState({ name: "", company: "", email: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const result = contactSchema.safeParse(form);
     if (!result.success) {
@@ -30,22 +28,6 @@ const ContactSection = () => {
       return;
     }
     setErrors({});
-    setSubmitting(true);
-
-    try {
-      await supabase.functions.invoke("create-lead", {
-        body: {
-          client_name: form.name.trim(),
-          email: form.email.trim(),
-          source: "Website Contact Form",
-          notes: `Company: ${form.company.trim() || "N/A"}\n\nMessage:\n${form.message.trim()}`,
-        },
-      });
-    } catch {
-      // Best-effort
-    }
-
-    setSubmitting(false);
     toast({ title: "Message sent!", description: "We'll get back to you shortly." });
     setForm({ name: "", company: "", email: "", message: "" });
   };
@@ -150,11 +132,9 @@ const ContactSection = () => {
             </div>
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-accent text-accent-foreground py-3 rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-green-dark transition-colors disabled:opacity-60"
+              className="w-full bg-accent text-accent-foreground py-3 rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-green-dark transition-colors"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {submitting ? "Sending..." : "Send Message"}
+              <Send className="w-4 h-4" /> Send Message
             </button>
           </motion.form>
         </div>
