@@ -109,6 +109,52 @@ const Payments = () => {
     if (error) {
       toast.error(error.message);
     } else {
+      // If payment is completed, move matching lead to "Purchase Completed" stage
+      if (paymentStatus === "completed" && clientName) {
+        try {
+          const { data: pcStage } = await supabase
+            .from("pipeline_stages")
+            .select("id")
+            .eq("name", "Purchase Completed")
+            .maybeSingle();
+
+          if (pcStage) {
+            const lead = completedLeads.find((l) => l.client_name === clientName);
+            if (!lead) {
+              // Try to find by email if no exact client match in completed leads
+              const emailToSearch = customerEmail.trim();
+              if (emailToSearch) {
+                const { data: leadByEmail } = await supabase
+                  .from("leads")
+                  .select("id, stage_id")
+                  .eq("email", emailToSearch)
+                  .neq("stage_id", pcStage.id)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (leadByEmail) {
+                  const { data: lastLead } = await supabase
+                    .from("leads")
+                    .select("position")
+                    .eq("stage_id", pcStage.id)
+                    .order("position", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  await supabase.from("leads").update({
+                    stage_id: pcStage.id,
+                    position: (lastLead?.position ?? -1) + 1,
+                  }).eq("id", leadByEmail.id);
+                }
+              }
+            }
+            // If lead was already in completedLeads, it's already in Purchase Completed
+          }
+        } catch (e) {
+          console.error("Failed to move lead to Purchase Completed:", e);
+        }
+      }
+
       toast.success("Payment recorded");
       setDialogOpen(false);
       setCustomerEmail("");
