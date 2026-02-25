@@ -167,6 +167,10 @@ const CRM = () => {
   const handleDragStart = (event: DragStartEvent) => {
     const lead = leads.find((l) => l.id === event.active.id);
     setActiveLead(lead || null);
+    // Store original stage for potential revert
+    if (lead) {
+      (event.active.data as any).current.originalStageId = lead.stage_id;
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -202,10 +206,38 @@ const CRM = () => {
     const lead = leads.find((l) => l.id === activeId);
     if (!lead) return;
 
+    const originalStageId = (active.data as any).current?.originalStageId || lead.stage_id;
+
     // Determine target stage
     const overLead = leads.find((l) => l.id === overId);
     const overStage = stages.find((s) => s.id === overId);
     const targetStageId = overLead ? overLead.stage_id : overStage ? overStage.id : lead.stage_id;
+
+    // If moving to a different stage, validate checklist
+    if (targetStageId !== originalStageId) {
+      const { data: criteria } = await supabase
+        .from("stage_criteria")
+        .select("id")
+        .eq("stage_id", targetStageId);
+
+      if (criteria && criteria.length > 0) {
+        const { data: checks } = await supabase
+          .from("lead_criteria_checks")
+          .select("criteria_id, checked")
+          .eq("lead_id", activeId)
+          .in("criteria_id", criteria.map((c) => c.id))
+          .eq("checked", true);
+
+        if (!checks || checks.length === 0) {
+          // Revert the optimistic stage change
+          setLeads((prev) =>
+            prev.map((l) => (l.id === activeId ? { ...l, stage_id: originalStageId } : l))
+          );
+          toast.error("Please check at least one criterion for the target stage before moving this lead. Open the lead card to complete the checklist.");
+          return;
+        }
+      }
+    }
 
     // Reorder within stage
     const stageLeads = leads
