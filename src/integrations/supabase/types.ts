@@ -67,6 +67,48 @@ export type Database = {
           },
         ]
       }
+      lead_criteria_checks: {
+        Row: {
+          checked: boolean
+          checked_at: string | null
+          checked_by: string | null
+          criteria_id: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          criteria_id: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          criteria_id?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_criteria_checks_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "stage_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_criteria_checks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -224,6 +266,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      stage_criteria: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          position: number
+          stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          position?: number
+          stage_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_criteria_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
