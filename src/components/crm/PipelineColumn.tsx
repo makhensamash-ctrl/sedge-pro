@@ -26,7 +26,7 @@ const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onO
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { type: "stage" } });
 
   return (
-    <div className="flex flex-col w-72 shrink-0">
+    <div className="flex flex-col w-72 shrink-0 px-3">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
