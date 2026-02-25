@@ -65,7 +65,16 @@ const Payments = () => {
     const stage = (stages || []).find((s) => s.name === "Purchase Completed");
     if (!stage) return;
     const { data: leads } = await supabase.from("leads").select("id, client_name, email, package").eq("stage_id", stage.id);
-    setCompletedLeads(leads || []);
+    // Filter out leads that already have a completed payment recorded
+    const { data: completedPayments } = await supabase.from("payments").select("customer_email, client_name").eq("status", "completed");
+    const paidEmails = new Set((completedPayments || []).map((p) => p.customer_email?.toLowerCase()).filter(Boolean));
+    const paidNames = new Set((completedPayments || []).map((p) => p.client_name?.toLowerCase()).filter(Boolean));
+    const unpaidLeads = (leads || []).filter((l) => {
+      const emailMatch = l.email && paidEmails.has(l.email.toLowerCase());
+      const nameMatch = paidNames.has(l.client_name.toLowerCase());
+      return !emailMatch && !nameMatch;
+    });
+    setCompletedLeads(unpaidLeads);
   };
 
   useEffect(() => { fetchPayments(); fetchCompletedLeads(); }, []);
