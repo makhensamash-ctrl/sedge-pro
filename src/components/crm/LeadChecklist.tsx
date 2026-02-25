@@ -27,7 +27,7 @@ const LeadChecklist = ({ leadId, stageId }: LeadChecklistProps) => {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const [{ data: criteriaData }, { data: checksData }] = await Promise.all([
+    const [{ data: criteriaData }, { data: checksData }, { data: stageData }] = await Promise.all([
       supabase
         .from("stage_criteria")
         .select("id, label, position")
@@ -37,14 +37,38 @@ const LeadChecklist = ({ leadId, stageId }: LeadChecklistProps) => {
         .from("lead_criteria_checks")
         .select("criteria_id, checked")
         .eq("lead_id", leadId),
+      supabase
+        .from("pipeline_stages")
+        .select("name")
+        .eq("id", stageId)
+        .single(),
     ]);
 
-    setCriteria((criteriaData as Criteria[]) || []);
+    const items = (criteriaData as Criteria[]) || [];
+    setCriteria(items);
+
+    // Auto-check all criteria for "New Lead" stage if no checks exist yet
+    const existingChecks = (checksData as CriteriaCheck[] | null) || [];
+    if (stageData?.name === "New Lead" && existingChecks.length === 0 && items.length > 0) {
+      const inserts = items.map((c) => ({
+        lead_id: leadId,
+        criteria_id: c.id,
+        checked: true,
+        checked_by: user?.id || null,
+        checked_at: new Date().toISOString(),
+      }));
+      await supabase.from("lead_criteria_checks").upsert(inserts, { onConflict: "lead_id,criteria_id" });
+      const map = new Map<string, boolean>();
+      items.forEach((c) => map.set(c.id, true));
+      setChecks(map);
+      setLoading(false);
+      return;
+    }
     const map = new Map<string, boolean>();
     (checksData as CriteriaCheck[] | null)?.forEach((c) => map.set(c.criteria_id, c.checked));
     setChecks(map);
     setLoading(false);
-  }, [leadId, stageId]);
+  }, [leadId, stageId, user?.id]);
 
   useEffect(() => {
     fetchData();
