@@ -44,9 +44,10 @@ const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onO
       {/* Droppable area */}
       <div
         ref={setNodeRef}
-        className={`flex-1 space-y-2 p-2 rounded-lg min-h-[200px] transition-colors ${
+        className={`flex-1 space-y-2 p-2 rounded-lg min-h-[200px] max-h-[calc(100vh-220px)] overflow-y-auto transition-colors scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent ${
           isOver ? "bg-accent/10 border-2 border-dashed border-accent" : "bg-muted/30"
         }`}
+        style={{ scrollbarWidth: 'thin' }}
       >
         <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
           {leads.map((lead) => {
