@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound, RotateCcw } from "lucide-react";
+import { UserPlus, KeyRound, RotateCcw, Pencil } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -33,6 +33,10 @@ const UsersManagement = () => {
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
   const [resettingAll, setResettingAll] = useState(false);
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [editNameUser, setEditNameUser] = useState<AdminUser | null>(null);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -124,6 +128,26 @@ const UsersManagement = () => {
     }
   };
 
+  const handleEditName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editNameUser) return;
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: editNameValue.trim() })
+        .eq("user_id", editNameUser.id);
+      if (error) throw error;
+      setUsers((prev) => prev.map((u) => u.id === editNameUser.id ? { ...u, full_name: editNameValue.trim() } : u));
+      toast.success("Name updated");
+      setEditNameOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update name");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -194,16 +218,26 @@ const UsersManagement = () => {
                 )}
                 <TableCell className="text-sm">{new Date(u.created_at).toLocaleDateString()}</TableCell>
                 {isSuperAdmin && (
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => { setSelectedUser(u); setPasswordOpen(true); }}
-                    >
-                      <KeyRound className="w-4 h-4 mr-1" />
-                      Reset Password
-                    </Button>
-                  </TableCell>
+                   <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setEditNameUser(u); setEditNameValue(u.full_name || ""); setEditNameOpen(true); }}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit Name
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setSelectedUser(u); setPasswordOpen(true); }}
+                      >
+                        <KeyRound className="w-4 h-4 mr-1" />
+                        Reset Password
+                      </Button>
+                    </div>
+                   </TableCell>
                 )}
               </TableRow>
             ))}
@@ -227,6 +261,27 @@ const UsersManagement = () => {
             </div>
             <Button type="submit" className="w-full" disabled={updatingPassword}>
               {updatingPassword ? "Updating..." : "Update Password"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Name Dialog */}
+      <Dialog open={editNameOpen} onOpenChange={(v) => { setEditNameOpen(v); if (!v) { setEditNameUser(null); setEditNameValue(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Admin Name</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">
+            Update the name for <strong>{editNameUser?.email}</strong>
+          </p>
+          <form onSubmit={handleEditName} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input value={editNameValue} onChange={(e) => setEditNameValue(e.target.value)} required placeholder="Enter full name" />
+            </div>
+            <Button type="submit" className="w-full" disabled={savingName}>
+              {savingName ? "Saving..." : "Save Name"}
             </Button>
           </form>
         </DialogContent>
