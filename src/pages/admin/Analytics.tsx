@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { Users, CreditCard, UserX, TrendingUp } from "lucide-react";
 import SalespersonPerformance from "@/components/analytics/SalespersonPerformance";
+import DateRangeFilter, { DateRange } from "@/components/analytics/DateRangeFilter";
 
 const PALETTE = {
   navy: "hsl(210, 65%, 17%)",
@@ -32,6 +33,7 @@ const customTooltipStyle = {
 };
 
 const Analytics = () => {
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   const [chartData, setChartData] = useState<{ name: string; revenue: number; count: number }[]>([]);
   const [leadsByPackage, setLeadsByPackage] = useState<{ name: string; count: number }[]>([]);
   const [leadsBySource, setLeadsBySource] = useState<{ name: string; count: number }[]>([]);
@@ -41,8 +43,14 @@ const Analytics = () => {
   const [totalRevenue, setTotalRevenue] = useState(0);
 
   useEffect(() => {
+    const fromISO = dateRange.from?.toISOString();
+    const toISO = dateRange.to ? new Date(dateRange.to.getTime() + 86400000 - 1).toISOString() : undefined;
+
     const fetchPayments = async () => {
-      const { data: payments } = await supabase.from("payments").select("package_name, amount_cents, status");
+      let query = supabase.from("payments").select("package_name, amount_cents, status, created_at");
+      if (fromISO) query = query.gte("created_at", fromISO);
+      if (toISO) query = query.lte("created_at", toISO);
+      const { data: payments } = await query;
       const completed = (payments || []).filter((p) => p.status === "completed");
 
       const byPackage: Record<string, { revenue: number; count: number }> = {};
@@ -58,7 +66,10 @@ const Analytics = () => {
     };
 
     const fetchLeads = async () => {
-      const { data: leads } = await supabase.from("leads").select("package, source, stage_id, generated_by");
+      let query = supabase.from("leads").select("package, source, stage_id, generated_by, created_at");
+      if (fromISO) query = query.gte("created_at", fromISO);
+      if (toISO) query = query.lte("created_at", toISO);
+      const { data: leads } = await query;
       const { data: stages } = await supabase.from("pipeline_stages").select("id, name, color, position").order("position");
       if (!leads) return;
       setTotalLeads(leads.length);
@@ -85,7 +96,7 @@ const Analytics = () => {
 
     fetchPayments();
     fetchLeads();
-  }, []);
+  }, [dateRange]);
 
   const paidConversions = chartData.reduce((s, d) => s + d.count, 0);
   const convertedLeads = leadsByStage.find((s) => s.name === "Purchase Completed")?.count || 0;
@@ -100,9 +111,12 @@ const Analytics = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
-        <p className="text-sm text-muted-foreground mt-1">Track your sales pipeline and revenue performance</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
+          <p className="text-sm text-muted-foreground mt-1">Track your sales pipeline and revenue performance</p>
+        </div>
+        <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
       </div>
 
       {/* Summary cards */}
@@ -283,7 +297,10 @@ const Analytics = () => {
       </div>
 
       {/* Salesperson Performance */}
-      <SalespersonPerformance />
+      <SalespersonPerformance
+        dateFrom={dateRange.from?.toISOString()}
+        dateTo={dateRange.to ? new Date(dateRange.to.getTime() + 86400000 - 1).toISOString() : undefined}
+      />
     </div>
   );
 };
