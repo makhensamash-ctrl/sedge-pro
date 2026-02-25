@@ -74,7 +74,7 @@ serve(async (req) => {
       const { data: wonStage } = await supabaseAdmin
         .from("pipeline_stages")
         .select("id")
-        .eq("name", "Won")
+        .eq("name", "Purchase Completed")
         .maybeSingle();
 
       if (wonStage) {
