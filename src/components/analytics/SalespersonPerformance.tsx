@@ -31,7 +31,12 @@ interface SalespersonStat {
   revenue: number;
 }
 
-const SalespersonPerformance = () => {
+interface SalespersonPerformanceProps {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const SalespersonPerformance = ({ dateFrom, dateTo }: SalespersonPerformanceProps) => {
   const [stats, setStats] = useState<SalespersonStat[]>([]);
 
   useEffect(() => {
@@ -39,13 +44,19 @@ const SalespersonPerformance = () => {
       const { data: salespersons } = await supabase.from("salespersons").select("id, name");
       if (!salespersons || salespersons.length === 0) return;
 
-      // Find the "Purchase Completed" stage
       const { data: stages } = await supabase.from("pipeline_stages").select("id, name");
       const convertedStage = (stages || []).find((s) => s.name === "Purchase Completed");
       const convertedStageId = convertedStage?.id;
 
-      const { data: leads } = await supabase.from("leads").select("id, salesperson_id, stage_id, email");
-      const { data: payments } = await supabase.from("payments").select("customer_email, amount_cents, status");
+      let leadsQuery = supabase.from("leads").select("id, salesperson_id, stage_id, email, created_at");
+      if (dateFrom) leadsQuery = leadsQuery.gte("created_at", dateFrom);
+      if (dateTo) leadsQuery = leadsQuery.lte("created_at", dateTo);
+      const { data: leads } = await leadsQuery;
+
+      let paymentsQuery = supabase.from("payments").select("customer_email, amount_cents, status, created_at");
+      if (dateFrom) paymentsQuery = paymentsQuery.gte("created_at", dateFrom);
+      if (dateTo) paymentsQuery = paymentsQuery.lte("created_at", dateTo);
+      const { data: payments } = await paymentsQuery;
 
       const completedPayments = (payments || []).filter((p) => p.status === "completed");
       const emailRevenue: Record<string, number> = {};
@@ -74,7 +85,7 @@ const SalespersonPerformance = () => {
       setStats(result);
     };
     fetch();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   if (stats.length === 0) return null;
 
