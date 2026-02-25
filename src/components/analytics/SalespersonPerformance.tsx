@@ -39,11 +39,15 @@ const SalespersonPerformance = () => {
       const { data: salespersons } = await supabase.from("salespersons").select("id, name");
       if (!salespersons || salespersons.length === 0) return;
 
-      const { data: leads } = await supabase.from("leads").select("id, salesperson_id, client_name, email");
+      // Find the "Purchase Completed" stage
+      const { data: stages } = await supabase.from("pipeline_stages").select("id, name");
+      const convertedStage = (stages || []).find((s) => s.name === "Purchase Completed");
+      const convertedStageId = convertedStage?.id;
+
+      const { data: leads } = await supabase.from("leads").select("id, salesperson_id, stage_id, email");
       const { data: payments } = await supabase.from("payments").select("customer_email, amount_cents, status");
 
       const completedPayments = (payments || []).filter((p) => p.status === "completed");
-      // Build email -> revenue map
       const emailRevenue: Record<string, number> = {};
       completedPayments.forEach((p) => {
         if (p.customer_email) {
@@ -56,9 +60,11 @@ const SalespersonPerformance = () => {
         let revenue = 0;
         let converted = 0;
         spLeads.forEach((l) => {
-          if (l.email && emailRevenue[l.email.toLowerCase()]) {
-            revenue += emailRevenue[l.email.toLowerCase()];
+          if (convertedStageId && l.stage_id === convertedStageId) {
             converted += 1;
+            if (l.email && emailRevenue[l.email.toLowerCase()]) {
+              revenue += emailRevenue[l.email.toLowerCase()];
+            }
           }
         });
         return { id: sp.id, name: sp.name, totalLeads: spLeads.length, convertedLeads: converted, revenue };
