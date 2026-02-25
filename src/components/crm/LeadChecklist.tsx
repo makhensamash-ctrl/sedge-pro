@@ -122,7 +122,7 @@ const LeadChecklist = ({ leadId, stageId }: LeadChecklistProps) => {
               <span
                 className={`text-sm transition-colors ${
                   isChecked
-                    ? "text-muted-foreground line-through"
+                    ? "text-muted-foreground"
                     : "text-foreground group-hover:text-primary"
                 }`}
               >
