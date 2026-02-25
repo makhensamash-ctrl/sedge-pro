@@ -102,26 +102,9 @@ const LeadChecklist = ({ leadId, stageId }: LeadChecklistProps) => {
 
   if (loading || criteria.length === 0) return null;
 
-  const checkedCount = criteria.filter((c) => checks.get(c.id)).length;
-  const total = criteria.length;
-  const progress = Math.round((checkedCount / total) * 100);
-
   return (
     <div className="pb-3 border-b border-border">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-medium">Stage Checklist</h4>
-        <span className="text-xs text-muted-foreground">
-          {checkedCount}/{total} complete
-        </span>
-      </div>
-
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full bg-muted mb-3 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <h4 className="text-sm font-medium mb-2">Stage Checklist</h4>
 
       <div className="space-y-2">
         {criteria.map((c) => {
