@@ -24,6 +24,7 @@ import { Plus, Search, X, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CRM = () => {
   const { user } = useAuth();
@@ -319,8 +320,14 @@ const CRM = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">CRM Pipeline</h2>
+      <Tabs defaultValue="sales" className="w-full">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <TabsList>
+              <TabsTrigger value="sales">Sales Pipeline</TabsTrigger>
+              <TabsTrigger value="support">Support Pipeline</TabsTrigger>
+            </TabsList>
+          </div>
         <div className="flex gap-2">
           <div className="flex rounded-lg border border-border overflow-hidden">
             <Button
@@ -348,84 +355,98 @@ const CRM = () => {
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, email, source..."
-            className="pl-9 h-9"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="w-3.5 h-3.5" />
-            </button>
+      <TabsContent value="sales" className="mt-0">
+        {/* Search & Filter Bar */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, email, source..."
+              className="pl-9 h-9"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue placeholder="Filter by assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All assignees</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {Array.from(adminMap.entries()).map(([id, name]) => (
+                <SelectItem key={id} value={id}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterAssignee("all"); }}>
+              Clear filters
+            </Button>
           )}
         </div>
-        <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-          <SelectTrigger className="w-48 h-9">
-            <SelectValue placeholder="Filter by assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All assignees</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {Array.from(adminMap.entries()).map(([id, name]) => (
-              <SelectItem key={id} value={id}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterAssignee("all"); }}>
-            Clear filters
-          </Button>
+
+        {viewMode === "kanban" ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex divide-x divide-border overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
+              {sortedStages.map((stage) => (
+                <PipelineColumn
+                  key={stage.id}
+                  stage={stage}
+                  leads={filteredLeads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
+                  onAddLead={handleAddLead}
+                  onEditLead={handleEditLead}
+                  onDeleteLead={handleDeleteLead}
+                  onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
+                  adminMap={adminMap}
+                  assignmentsMap={assignmentsMap}
+                />
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeLead && (
+                <div className="rotate-3 opacity-90">
+                  <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} onOpenDetail={() => {}} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <LeadListView
+            leads={filteredLeads}
+            stages={sortedStages}
+            adminMap={adminMap}
+            assignmentsMap={assignmentsMap}
+            onEditLead={handleEditLead}
+            onDeleteLead={handleDeleteLead}
+            onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
+          />
         )}
-      </div>
+      </TabsContent>
 
-      {viewMode === "kanban" ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex divide-x divide-border overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
-            {sortedStages.map((stage) => (
-              <PipelineColumn
-                key={stage.id}
-                stage={stage}
-                leads={filteredLeads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
-                onAddLead={handleAddLead}
-                onEditLead={handleEditLead}
-                onDeleteLead={handleDeleteLead}
-                onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
-                adminMap={adminMap}
-                assignmentsMap={assignmentsMap}
-              />
-            ))}
+      <TabsContent value="support" className="mt-0">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="rounded-full bg-muted p-4 mb-4">
+            <Search className="w-8 h-8 text-muted-foreground" />
           </div>
-
-          <DragOverlay>
-            {activeLead && (
-              <div className="rotate-3 opacity-90">
-                <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} onOpenDetail={() => {}} />
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        <LeadListView
-          leads={filteredLeads}
-          stages={sortedStages}
-          adminMap={adminMap}
-          assignmentsMap={assignmentsMap}
-          onEditLead={handleEditLead}
-          onDeleteLead={handleDeleteLead}
-          onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
-        />
-      )}
+          <h3 className="text-lg font-semibold text-foreground mb-2">Support Pipeline</h3>
+          <p className="text-muted-foreground max-w-md">
+            The support pipeline is coming soon. You'll be able to track and manage support tickets here.
+          </p>
+        </div>
+      </TabsContent>
 
       <LeadDialog
         open={dialogOpen}
@@ -441,7 +462,6 @@ const CRM = () => {
         open={detailOpen}
         onOpenChange={async (open) => {
           if (!open && pendingMove) {
-            // Dialog closing — validate if at least one criterion was checked
             const { data: criteria } = await supabase
               .from("stage_criteria")
               .select("id")
@@ -457,15 +477,13 @@ const CRM = () => {
                 .eq("checked", true);
               hasChecked = (checks && checks.length > 0) || false;
             } else {
-              hasChecked = true; // no criteria = no restriction
+              hasChecked = true;
             }
 
             if (hasChecked) {
-              // Confirm the move
               await supabase.from("leads").update({ stage_id: pendingMove.targetStageId }).eq("id", pendingMove.leadId);
               toast.success("Lead moved successfully");
             } else {
-              // Revert
               setLeads((prev) =>
                 prev.map((l) => (l.id === pendingMove.leadId ? { ...l, stage_id: pendingMove.originalStageId } : l))
               );
@@ -479,6 +497,7 @@ const CRM = () => {
         onToggleAssign={handleToggleAssignment}
         assignmentsMap={assignmentsMap}
       />
+      </Tabs>
     </div>
   );
 };

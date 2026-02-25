@@ -10,7 +10,7 @@ import MfaSetupDialog from "@/components/MfaSetupDialog";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
-  { label: "CRM Pipeline", icon: Kanban, path: "/admin/crm" },
+  { label: "Sales Pipeline", icon: Kanban, path: "/admin/crm" },
   { label: "Payments", icon: CreditCard, path: "/admin/payments" },
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
