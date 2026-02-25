@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ interface LeadDialogProps {
   lead: Lead | null;
   stageId: string;
   stages: PipelineStage[];
-  onSave: (data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null; generated_by: string | null }, id?: string) => void;
+  onSave: (data: { client_name: string; phone: string; email: string; source: string; notes: string; stage_id: string; package: string | null; generated_by: string | null; salesperson_id: string | null }, id?: string) => void;
   saving: boolean;
 }
 
@@ -31,6 +32,8 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("");
   const [generatedBy, setGeneratedBy] = useState("");
+  const [salespersonId, setSalespersonId] = useState("");
+  const [salespersons, setSalespersons] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -42,13 +45,15 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
       setSelectedStage(lead?.stage_id || stageId);
       setSelectedPackage(lead?.package || "");
       setGeneratedBy(lead?.generated_by || "");
+      setSalespersonId((lead as any)?.salesperson_id || "");
+      supabase.from("salespersons").select("id, name").order("name").then(({ data }) => setSalespersons(data || []));
     }
   }, [open, lead, stageId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(
-      { client_name: clientName.trim(), phone: phone.trim(), email: email.trim(), source, notes: notes.trim(), stage_id: selectedStage, package: selectedPackage || null, generated_by: generatedBy || null },
+      { client_name: clientName.trim(), phone: phone.trim(), email: email.trim(), source, notes: notes.trim(), stage_id: selectedStage, package: selectedPackage || null, generated_by: generatedBy || null, salesperson_id: salespersonId || null },
       lead?.id
     );
   };
@@ -130,7 +135,18 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>Salesperson</Label>
+            <Select value={salespersonId} onValueChange={setSalespersonId}>
+              <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {salespersons.map((sp) => (
+                  <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={3} placeholder="Additional notes..." />
           </div>
           <Button type="submit" className="w-full" disabled={saving}>

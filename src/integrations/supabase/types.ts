@@ -151,6 +151,7 @@ export type Database = {
           package: string | null
           phone: string | null
           position: number
+          salesperson_id: string | null
           source: string | null
           stage_id: string
           updated_at: string
@@ -167,6 +168,7 @@ export type Database = {
           package?: string | null
           phone?: string | null
           position?: number
+          salesperson_id?: string | null
           source?: string | null
           stage_id: string
           updated_at?: string
@@ -183,11 +185,19 @@ export type Database = {
           package?: string | null
           phone?: string | null
           position?: number
+          salesperson_id?: string | null
           source?: string | null
           stage_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "salespersons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_stage_id_fkey"
             columns: ["stage_id"]
@@ -293,6 +303,30 @@ export type Database = {
           require_2fa?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      salespersons: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
