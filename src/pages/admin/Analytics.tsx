@@ -88,11 +88,12 @@ const Analytics = () => {
   }, []);
 
   const paidConversions = chartData.reduce((s, d) => s + d.count, 0);
+  const convertedLeads = leadsByStage.find((s) => s.name === "Purchase Completed")?.count || 0;
   const unassigned = leadsByPackage.find((p) => p.name === "Unassigned")?.count || 0;
 
   const statCards = [
     { label: "Total Leads", value: totalLeads, icon: Users, gradient: "from-[hsl(210,65%,17%)] to-[hsl(210,45%,30%)]" },
-    { label: "Paid Conversions", value: paidConversions, icon: CreditCard, gradient: "from-[hsl(100,52%,42%)] to-[hsl(100,52%,55%)]" },
+    { label: "Conversions", value: convertedLeads, icon: CreditCard, gradient: "from-[hsl(100,52%,42%)] to-[hsl(100,52%,55%)]" },
     { label: "Total Revenue", value: `R${totalRevenue.toLocaleString()}`, icon: TrendingUp, gradient: "from-[hsl(200,65%,45%)] to-[hsl(200,65%,60%)]" },
     { label: "Unassigned Leads", value: unassigned, icon: UserX, gradient: "from-[hsl(35,85%,50%)] to-[hsl(35,85%,62%)]" },
   ];
