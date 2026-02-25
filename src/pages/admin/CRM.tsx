@@ -18,8 +18,9 @@ import LeadCard, { type Lead } from "@/components/crm/LeadCard";
 import LeadDialog from "@/components/crm/LeadDialog";
 import LeadDetailDialog from "@/components/crm/LeadDetailDialog";
 import StageManager from "@/components/crm/StageManager";
+import LeadListView from "@/components/crm/LeadListView";
 import { toast } from "sonner";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, X, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,6 +40,7 @@ const CRM = () => {
   const [assignmentsMap, setAssignmentsMap] = useState<Map<string, string[]>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -284,6 +286,24 @@ const CRM = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">CRM Pipeline</h2>
         <div className="flex gap-2">
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none px-3"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none px-3"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
           <Button size="sm" onClick={() => { setAddToStageId(sortedStages[0]?.id || ""); setEditingLead(null); setDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
             Add Lead
@@ -327,37 +347,49 @@ const CRM = () => {
         )}
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
-          {sortedStages.map((stage) => (
-            <PipelineColumn
-              key={stage.id}
-              stage={stage}
-              leads={filteredLeads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
-              onAddLead={handleAddLead}
-              onEditLead={handleEditLead}
-              onDeleteLead={handleDeleteLead}
-              onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
-              adminMap={adminMap}
-              assignmentsMap={assignmentsMap}
-            />
-          ))}
-        </div>
+      {viewMode === "kanban" ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
+            {sortedStages.map((stage) => (
+              <PipelineColumn
+                key={stage.id}
+                stage={stage}
+                leads={filteredLeads.filter((l) => l.stage_id === stage.id).sort((a, b) => a.position - b.position)}
+                onAddLead={handleAddLead}
+                onEditLead={handleEditLead}
+                onDeleteLead={handleDeleteLead}
+                onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
+                adminMap={adminMap}
+                assignmentsMap={assignmentsMap}
+              />
+            ))}
+          </div>
 
-        <DragOverlay>
-          {activeLead && (
-            <div className="rotate-3 opacity-90">
-              <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} onOpenDetail={() => {}} />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {activeLead && (
+              <div className="rotate-3 opacity-90">
+                <LeadCard lead={activeLead} onEdit={() => {}} onDelete={() => {}} onOpenDetail={() => {}} />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        <LeadListView
+          leads={filteredLeads}
+          stages={sortedStages}
+          adminMap={adminMap}
+          assignmentsMap={assignmentsMap}
+          onEditLead={handleEditLead}
+          onDeleteLead={handleDeleteLead}
+          onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
+        />
+      )}
 
       <LeadDialog
         open={dialogOpen}
