@@ -45,7 +45,7 @@ const Payments = () => {
   const [selectedPackage, setSelectedPackage] = useState("");
   const [customAmount, setCustomAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("completed");
-  const [completedLeads, setCompletedLeads] = useState<{ id: string; client_name: string; email: string | null }[]>([]);
+  const [completedLeads, setCompletedLeads] = useState<{ id: string; client_name: string; email: string | null; package: string | null }[]>([]);
 
   const fetchPayments = () => {
     supabase
@@ -62,7 +62,7 @@ const Payments = () => {
     const { data: stages } = await supabase.from("pipeline_stages").select("id, name");
     const stage = (stages || []).find((s) => s.name === "Purchase Completed");
     if (!stage) return;
-    const { data: leads } = await supabase.from("leads").select("id, client_name, email").eq("stage_id", stage.id);
+    const { data: leads } = await supabase.from("leads").select("id, client_name, email, package").eq("stage_id", stage.id);
     setCompletedLeads(leads || []);
   };
 
@@ -176,6 +176,11 @@ const Payments = () => {
                 setClientName(val);
                 const lead = completedLeads.find((l) => l.client_name === val);
                 if (lead?.email) setCustomerEmail(lead.email);
+                if (lead?.package) {
+                  setSelectedPackage(lead.package);
+                  const pkg = packages.find((p) => p.name === lead.package);
+                  if (pkg) setCustomAmount((pkg.amount / 100).toString());
+                }
               }}>
                 <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>
