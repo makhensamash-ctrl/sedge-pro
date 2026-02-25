@@ -25,7 +25,7 @@ interface LeadCardProps {
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onOpenDetail: (lead: Lead) => void;
-  assigneeName?: string | null;
+  assigneeNames?: string[];
 }
 
 const getInitials = (name: string) => {
@@ -43,7 +43,7 @@ const packageColors: Record<string, string> = {
   "Project Collaboration Service": "bg-violet-500/10 text-violet-700 border-violet-200",
 };
 
-const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCardProps) => {
+const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeNames = [] }: LeadCardProps) => {
   const {
     attributes,
     listeners,
@@ -83,12 +83,23 @@ const LeadCard = ({ lead, onEdit, onDelete, onOpenDetail, assigneeName }: LeadCa
         <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
           {lead.client_name}
         </h4>
-        {assigneeName && (
-          <Avatar className="h-7 w-7 shrink-0 ring-2 ring-background shadow-sm">
-            <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
-              {getInitials(assigneeName)}
-            </AvatarFallback>
-          </Avatar>
+        {assigneeNames.length > 0 && (
+          <div className="flex -space-x-1.5 shrink-0">
+            {assigneeNames.slice(0, 3).map((name, i) => (
+              <Avatar key={i} className="h-6 w-6 ring-2 ring-background shadow-sm">
+                <AvatarFallback className="text-[9px] font-bold bg-primary text-primary-foreground">
+                  {getInitials(name)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+            {assigneeNames.length > 3 && (
+              <Avatar className="h-6 w-6 ring-2 ring-background shadow-sm">
+                <AvatarFallback className="text-[9px] font-bold bg-muted text-muted-foreground">
+                  +{assigneeNames.length - 3}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
         )}
       </div>
 

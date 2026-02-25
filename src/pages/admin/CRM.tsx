@@ -36,6 +36,7 @@ const CRM = () => {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [adminMap, setAdminMap] = useState<Map<string, string>>(new Map());
+  const [assignmentsMap, setAssignmentsMap] = useState<Map<string, string[]>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
 
@@ -69,12 +70,23 @@ const CRM = () => {
     setAdminMap(map);
   }, []);
 
+  const fetchAssignments = useCallback(async () => {
+    const { data } = await supabase.from("lead_assignments").select("lead_id, user_id");
+    const map = new Map<string, string[]>();
+    data?.forEach((a: any) => {
+      const existing = map.get(a.lead_id) || [];
+      existing.push(a.user_id);
+      map.set(a.lead_id, existing);
+    });
+    setAssignmentsMap(map);
+  }, []);
+
   useEffect(() => {
     fetchStages();
     fetchLeads();
     fetchAdminMap();
+    fetchAssignments();
 
-    // Realtime subscription for leads
     const channel = supabase
       .channel("crm-realtime")
       .on(
@@ -87,10 +99,15 @@ const CRM = () => {
         { event: "*", schema: "public", table: "lead_comments" },
         () => { /* handled in LeadDetailDialog */ }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lead_assignments" },
+        () => { fetchAssignments(); }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetchStages, fetchLeads, fetchAdminMap]);
+  }, [fetchStages, fetchLeads, fetchAdminMap, fetchAssignments]);
 
   const handleAddLead = (stageId: string) => {
     setEditingLead(null);
@@ -217,27 +234,45 @@ const CRM = () => {
     }
   };
 
-  const handleAssignLead = async (leadId: string, userId: string | null) => {
-    const { error } = await supabase.from("leads").update({ assigned_to: userId }).eq("id", leadId);
-    if (error) { toast.error(error.message); return; }
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, assigned_to: userId } : l)));
-    setDetailLead((prev) => prev && prev.id === leadId ? { ...prev, assigned_to: userId } : prev);
-    toast.success(userId ? "Lead assigned" : "Lead unassigned");
+  const handleToggleAssignment = async (leadId: string, userId: string) => {
+    const currentAssignees = assignmentsMap.get(leadId) || [];
+    if (currentAssignees.includes(userId)) {
+      // Remove assignment
+      const { error } = await supabase.from("lead_assignments").delete().eq("lead_id", leadId).eq("user_id", userId);
+      if (error) { toast.error(error.message); return; }
+      setAssignmentsMap((prev) => {
+        const next = new Map(prev);
+        next.set(leadId, currentAssignees.filter((id) => id !== userId));
+        return next;
+      });
+      toast.success("Admin removed from lead");
+    } else {
+      // Add assignment
+      const { error } = await supabase.from("lead_assignments").insert({ lead_id: leadId, user_id: userId });
+      if (error) { toast.error(error.message); return; }
+      setAssignmentsMap((prev) => {
+        const next = new Map(prev);
+        next.set(leadId, [...currentAssignees, userId]);
+        return next;
+      });
+      toast.success("Admin assigned to lead");
+    }
   };
 
   const query = searchQuery.toLowerCase().trim();
   const filteredLeads = leads.filter((l) => {
+    const leadAssignees = assignmentsMap.get(l.id) || [];
     if (query) {
-      const assigneeName = l.assigned_to ? adminMap.get(l.assigned_to)?.toLowerCase() : "";
+      const assigneeNames = leadAssignees.map((id) => adminMap.get(id)?.toLowerCase() || "").join(" ");
       const match =
         l.client_name.toLowerCase().includes(query) ||
         (l.email?.toLowerCase().includes(query)) ||
         (l.source?.toLowerCase().includes(query)) ||
-        (assigneeName?.includes(query));
+        assigneeNames.includes(query);
       if (!match) return false;
     }
-    if (filterAssignee === "unassigned") return !l.assigned_to;
-    if (filterAssignee !== "all") return l.assigned_to === filterAssignee;
+    if (filterAssignee === "unassigned") return leadAssignees.length === 0;
+    if (filterAssignee !== "all") return leadAssignees.includes(filterAssignee);
     return true;
   });
 
@@ -310,6 +345,7 @@ const CRM = () => {
               onDeleteLead={handleDeleteLead}
               onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
               adminMap={adminMap}
+              assignmentsMap={assignmentsMap}
             />
           ))}
         </div>
@@ -337,7 +373,8 @@ const CRM = () => {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         lead={detailLead}
-        onAssign={handleAssignLead}
+        onToggleAssign={handleToggleAssignment}
+        assignmentsMap={assignmentsMap}
       />
     </div>
   );
