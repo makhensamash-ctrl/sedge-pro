@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -15,57 +15,21 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const packages = [
-  {
-    name: "Certificates & Invoicing Services",
-    price: "R2 997",
-    amountCents: 299700,
-    unit: "for up to 5 projects",
-    note: null,
-    features: [
-      "Easy creation of payment certificates",
-      "Attach photos as evidence",
-      "Issue Tax Invoices and Statements of Accounts",
-      "Monitor cashflow",
-      "Expert advise",
-      "Realtime dashboards for clients and consultants",
-    ],
-  },
-  {
-    name: "Profitability Management",
-    price: "R9 997",
-    amountCents: 999700,
-    unit: "for up to 3 projects",
-    note: null,
-    popular: true,
-    features: [
-      "Track planned vs actual profit",
-      "Identify profit leakages",
-      "Manage cashflow",
-      "Expert advise",
-      "Realtime dashboards for clients and consultants",
-      "Monitor cashflow",
-    ],
-  },
-  {
-    name: "Project Collaboration Service",
-    price: "R1 997",
-    amountCents: 199700,
-    unit: "for up to 3 projects",
-    note: "Only available to those with existing packages",
-    features: [
-      "Submit and track approvals online",
-      "Receive, issue and record project communications online",
-      "Track compliance to response timelines",
-      "Realtime dashboards for clients and consultants",
-      "Expert advise",
-    ],
-  },
-];
+interface PackageData {
+  id: string;
+  name: string;
+  price_cents: number;
+  currency: string;
+  description: string | null;
+  features: string[];
+  is_popular: boolean;
+  position: number;
+}
 
 const PricingSection = () => {
+  const [packages, setPackages] = useState<PackageData[]>([]);
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
-  const [selectedPkg, setSelectedPkg] = useState<typeof packages[0] | null>(null);
+  const [selectedPkg, setSelectedPkg] = useState<PackageData | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -74,7 +38,18 @@ const PricingSection = () => {
   const [regNumber, setRegNumber] = useState("");
   const [billingAddress, setBillingAddress] = useState("");
 
-  const handleSignUp = (pkg: typeof packages[0]) => {
+  useEffect(() => {
+    supabase
+      .from("packages")
+      .select("id, name, price_cents, currency, description, features, is_popular, position")
+      .eq("is_active", true)
+      .order("position")
+      .then(({ data }) => setPackages((data as PackageData[]) || []));
+  }, []);
+
+  const formatPrice = (cents: number) => `R${(cents / 100).toLocaleString()}`;
+
+  const handleSignUp = (pkg: PackageData) => {
     setSelectedPkg(pkg);
     setCustomerName("");
     setCustomerEmail("");
@@ -94,7 +69,7 @@ const PricingSection = () => {
       const { data, error } = await supabase.functions.invoke("create-yoco-checkout", {
         body: {
           packageName: selectedPkg.name,
-          amount: selectedPkg.amountCents,
+          amount: selectedPkg.price_cents,
           customerName: customerName.trim(),
           customerEmail: customerEmail.trim(),
           customerPhone: customerPhone.trim(),
@@ -106,8 +81,8 @@ const PricingSection = () => {
             {
               displayName: selectedPkg.name,
               quantity: 1,
-              pricingDetails: { price: selectedPkg.amountCents },
-              description: selectedPkg.unit,
+              pricingDetails: { price: selectedPkg.price_cents },
+              description: selectedPkg.description || selectedPkg.name,
             },
           ],
         },
@@ -128,6 +103,8 @@ const PricingSection = () => {
     }
   };
 
+  if (packages.length === 0) return null;
+
   return (
     <section id="pricing" className="py-20 bg-surface">
       <div className="container mx-auto px-4">
@@ -145,19 +122,19 @@ const PricingSection = () => {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className={`grid gap-6 max-w-5xl mx-auto ${packages.length === 1 ? "md:grid-cols-1 max-w-md" : packages.length === 2 ? "md:grid-cols-2 max-w-3xl" : "md:grid-cols-3"}`}>
           {packages.map((pkg, i) => (
             <motion.div
-              key={pkg.name}
+              key={pkg.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className={`relative flex flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
-                pkg.popular ? "border-accent ring-2 ring-accent/20" : "border-border"
+                pkg.is_popular ? "border-accent ring-2 ring-accent/20" : "border-border"
               }`}
             >
-              {pkg.popular && (
+              {pkg.is_popular && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-bold px-4 py-1 rounded-full">
                   Most Popular
                 </span>
@@ -167,10 +144,9 @@ const PricingSection = () => {
                 <h3 className="text-lg font-bold text-primary mb-2 leading-tight min-h-[3.5rem] flex items-center justify-center">
                   {pkg.name}
                 </h3>
-                <div className="text-3xl font-extrabold text-accent mb-1">{pkg.price}</div>
-                <span className="text-sm text-muted-foreground">{pkg.unit}</span>
-                {pkg.note && (
-                  <p className="text-xs text-muted-foreground italic mt-2">({pkg.note})</p>
+                <div className="text-3xl font-extrabold text-accent mb-1">{formatPrice(pkg.price_cents)}</div>
+                {pkg.description && (
+                  <span className="text-sm text-muted-foreground">{pkg.description}</span>
                 )}
               </div>
 
@@ -187,7 +163,7 @@ const PricingSection = () => {
                 onClick={() => handleSignUp(pkg)}
                 disabled={loadingPkg !== null}
                 className={`w-full rounded-full font-semibold ${
-                  pkg.popular
+                  pkg.is_popular
                     ? "bg-accent text-accent-foreground hover:bg-accent/90"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }`}
@@ -247,7 +223,7 @@ const PricingSection = () => {
               </Select>
             </div>
             <Button type="submit" className="w-full" disabled={loadingPkg !== null || !heardAbout}>
-              {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg?.price}`}
+              {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg ? formatPrice(selectedPkg.price_cents) : ""}`}
             </Button>
           </form>
         </DialogContent>
