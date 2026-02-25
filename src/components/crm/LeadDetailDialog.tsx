@@ -166,11 +166,12 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onToggleAssign, assignment
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-lg">{lead.client_name}</DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3" style={{ scrollbarWidth: 'thin' }}>
         {/* Client Details */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 pb-3 border-b border-border text-sm">
           {lead.email && (
@@ -250,7 +251,7 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onToggleAssign, assignment
         {/* Comments */}
         <div className="flex-1 min-h-0 flex flex-col">
           <h4 className="text-sm font-medium mb-2">Comments</h4>
-          <ScrollArea className="flex-1 max-h-[300px] pr-2" ref={scrollRef}>
+          <ScrollArea className="flex-1 max-h-[250px] pr-2 [&>div>div]:!block" ref={scrollRef}>
             <div className="space-y-3">
               {comments.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-6">No comments yet</p>
@@ -302,6 +303,7 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onToggleAssign, assignment
               <Send className="w-4 h-4" />
             </Button>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
