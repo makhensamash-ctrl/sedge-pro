@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Select removed - using checkboxes for multi-assign
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, UserCircle, Phone, Mail, Globe, FileText, Package, Calendar, Sparkles } from "lucide-react";
@@ -34,10 +35,11 @@ interface LeadDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead | null;
-  onAssign: (leadId: string, userId: string | null) => void;
+  onToggleAssign: (leadId: string, userId: string) => void;
+  assignmentsMap: Map<string, string[]>;
 }
 
-const LeadDetailDialog = ({ open, onOpenChange, lead, onAssign }: LeadDetailDialogProps) => {
+const LeadDetailDialog = ({ open, onOpenChange, lead, onToggleAssign, assignmentsMap }: LeadDetailDialogProps) => {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -217,25 +219,32 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onAssign }: LeadDetailDial
         <LeadChecklist leadId={lead.id} stageId={lead.stage_id} />
 
         {/* Assignment */}
-        <div className="flex items-center gap-3 pb-3 border-b border-border">
-          <UserCircle className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-sm text-muted-foreground">Assign to:</span>
-          <Select
-            value={lead.assigned_to || "unassigned"}
-            onValueChange={(val) => onAssign(lead.id, val === "unassigned" ? null : val)}
-          >
-            <SelectTrigger className="h-8 w-48 text-sm">
-              <SelectValue placeholder="Unassigned" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              {admins.map((admin) => (
-                <SelectItem key={admin.user_id} value={admin.user_id}>
-                  {admin.full_name || admin.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="pb-3 border-b border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <UserCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium">Assigned to:</span>
+          </div>
+          <div className="space-y-1.5 ml-6">
+            {admins.map((admin) => {
+              const assignees = assignmentsMap.get(lead.id) || [];
+              const isAssigned = assignees.includes(admin.user_id);
+              return (
+                <label key={admin.user_id} className="flex items-center gap-2 cursor-pointer group">
+                  <Checkbox
+                    checked={isAssigned}
+                    onCheckedChange={() => onToggleAssign(lead.id, admin.user_id)}
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  />
+                  <span className={`text-sm ${isAssigned ? "text-foreground font-medium" : "text-muted-foreground group-hover:text-foreground"}`}>
+                    {admin.full_name || admin.email}
+                  </span>
+                </label>
+              );
+            })}
+            {admins.length === 0 && (
+              <p className="text-xs text-muted-foreground">No admins available</p>
+            )}
+          </div>
         </div>
 
         {/* Comments */}

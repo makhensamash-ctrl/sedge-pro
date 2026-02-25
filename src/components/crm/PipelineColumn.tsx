@@ -19,9 +19,10 @@ interface PipelineColumnProps {
   onDeleteLead: (id: string) => void;
   onOpenDetail: (lead: Lead) => void;
   adminMap: Map<string, string>;
+  assignmentsMap: Map<string, string[]>;
 }
 
-const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onOpenDetail, adminMap }: PipelineColumnProps) => {
+const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onOpenDetail, adminMap, assignmentsMap }: PipelineColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { type: "stage" } });
 
   return (
@@ -48,16 +49,20 @@ const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onO
         }`}
       >
         <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-          {leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onEdit={onEditLead}
-              onDelete={onDeleteLead}
-              onOpenDetail={onOpenDetail}
-              assigneeName={lead.assigned_to ? adminMap.get(lead.assigned_to) : null}
-            />
-          ))}
+          {leads.map((lead) => {
+            const assigneeIds = assignmentsMap.get(lead.id) || [];
+            const assigneeNames = assigneeIds.map((id) => adminMap.get(id)).filter(Boolean) as string[];
+            return (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                onEdit={onEditLead}
+                onDelete={onDeleteLead}
+                onOpenDetail={onOpenDetail}
+                assigneeNames={assigneeNames}
+              />
+            );
+          })}
         </SortableContext>
       </div>
     </div>
