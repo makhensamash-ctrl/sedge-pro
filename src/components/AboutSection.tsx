@@ -10,7 +10,7 @@ const highlights = [
 {
   icon: Users,
   title: "Expert Support",
-  desc: "We don't just give you software — we give you the support to use it."
+  desc: "We don't just provide you with software — we give you project and business support.'"
 },
 {
   icon: BarChart3,
