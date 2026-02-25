@@ -20,21 +20,33 @@ interface PipelineColumnProps {
   onOpenDetail: (lead: Lead) => void;
   adminMap: Map<string, string>;
   assignmentsMap: Map<string, string[]>;
+  totalCents?: number;
 }
 
-const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onOpenDetail, adminMap, assignmentsMap }: PipelineColumnProps) => {
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(cents / 100);
+};
+
+const PipelineColumn = ({ stage, leads, onAddLead, onEditLead, onDeleteLead, onOpenDetail, adminMap, assignmentsMap, totalCents = 0 }: PipelineColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { type: "stage" } });
 
   return (
     <div className="flex flex-col w-72 shrink-0 px-3">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-          <h3 className="font-semibold text-sm text-foreground">{stage.name}</h3>
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-            {leads.length}
-          </span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+            <h3 className="font-semibold text-sm text-foreground">{stage.name}</h3>
+            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+              {leads.length}
+            </span>
+          </div>
+          {totalCents > 0 && (
+            <span className="text-xs font-medium text-primary pl-5">
+              {formatCurrency(totalCents)}
+            </span>
+          )}
         </div>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAddLead(stage.id)}>
           <Plus className="w-4 h-4" />

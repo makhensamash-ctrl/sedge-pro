@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -39,6 +39,7 @@ const CRM = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [adminMap, setAdminMap] = useState<Map<string, string>>(new Map());
   const [assignmentsMap, setAssignmentsMap] = useState<Map<string, string[]>>(new Map());
+  const [packagePriceMap, setPackagePriceMap] = useState<Map<string, number>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -86,11 +87,19 @@ const CRM = () => {
     setAssignmentsMap(map);
   }, []);
 
+  const fetchPackages = useCallback(async () => {
+    const { data } = await supabase.from("packages").select("name, price_cents");
+    const map = new Map<string, number>();
+    data?.forEach((p: any) => map.set(p.name, p.price_cents));
+    setPackagePriceMap(map);
+  }, []);
+
   useEffect(() => {
     fetchStages();
     fetchLeads();
     fetchAdminMap();
     fetchAssignments();
+    fetchPackages();
 
     const channel = supabase
       .channel("crm-realtime")
@@ -112,7 +121,7 @@ const CRM = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetchStages, fetchLeads, fetchAdminMap, fetchAssignments]);
+  }, [fetchStages, fetchLeads, fetchAdminMap, fetchAssignments, fetchPackages]);
 
   const handleAddLead = (stageId: string) => {
     setEditingLead(null);
@@ -318,6 +327,18 @@ const CRM = () => {
   const hasFilters = query || filterAssignee !== "all";
   const sortedStages = [...stages].sort((a, b) => a.position - b.position);
 
+  // Compute total value per stage based on package prices
+  const stageTotalsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    filteredLeads.forEach((lead) => {
+      if (lead.package) {
+        const priceCents = packagePriceMap.get(lead.package) || 0;
+        map.set(lead.stage_id, (map.get(lead.stage_id) || 0) + priceCents);
+      }
+    });
+    return map;
+  }, [filteredLeads, packagePriceMap]);
+
   return (
     <div>
       <Tabs defaultValue="sales" className="w-full">
@@ -411,6 +432,7 @@ const CRM = () => {
                   onOpenDetail={(lead) => { setDetailLead(lead); setDetailOpen(true); }}
                   adminMap={adminMap}
                   assignmentsMap={assignmentsMap}
+                  totalCents={stageTotalsMap.get(stage.id) || 0}
                 />
               ))}
             </div>
