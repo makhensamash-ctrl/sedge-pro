@@ -20,7 +20,6 @@ interface LeadDialogProps {
 }
 
 const leadSources = ["Website", "Referral", "Social Media", "Cold Call", "Email Campaign", "Walk-in", "Tender", "Other"];
-const leadPackages = ["Certificates & Invoicing", "Profitability Management", "Project Collaboration Service"];
 const generatedByOptions = ["Website Chat", "Contact Form", "Manual Entry", "Payment Checkout", "Referral", "Other"];
 
 const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving }: LeadDialogProps) => {
@@ -34,6 +33,7 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
   const [generatedBy, setGeneratedBy] = useState("");
   const [salespersonId, setSalespersonId] = useState("");
   const [salespersons, setSalespersons] = useState<{ id: string; name: string }[]>([]);
+  const [dbPackages, setDbPackages] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -47,6 +47,7 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
       setGeneratedBy(lead?.generated_by || "");
       setSalespersonId((lead as any)?.salesperson_id || "");
       supabase.from("salespersons").select("id, name").order("name").then(({ data }) => setSalespersons(data || []));
+      supabase.from("packages").select("name").eq("is_active", true).order("position").then(({ data }) => setDbPackages((data || []).map((p: any) => p.name)));
     }
   }, [open, lead, stageId]);
 
@@ -115,7 +116,7 @@ const LeadDialog = ({ open, onOpenChange, lead, stageId, stages, onSave, saving 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
-                {leadPackages.map((p) => (
+                {dbPackages.map((p) => (
                   <SelectItem key={p} value={p}>{p}</SelectItem>
                 ))}
               </SelectContent>
