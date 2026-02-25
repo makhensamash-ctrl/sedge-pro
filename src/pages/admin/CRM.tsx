@@ -42,6 +42,7 @@ const CRM = () => {
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const dragOriginalStageRef = useRef<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ leadId: string; originalStageId: string; targetStageId: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -230,11 +231,13 @@ const CRM = () => {
           .eq("checked", true);
 
         if (!checks || checks.length === 0) {
-          // Revert the optimistic stage change
-          setLeads((prev) =>
-            prev.map((l) => (l.id === activeId ? { ...l, stage_id: originalStageId } : l))
-          );
-          toast.error("Please check at least one criterion for the target stage before moving this lead. Open the lead card to complete the checklist.");
+          // Keep card in new stage visually, open detail dialog for user to check criteria
+          const movedLead = leads.find((l) => l.id === activeId);
+          setPendingMove({ leadId: activeId, originalStageId, targetStageId });
+          // Show the lead with the TARGET stage so checklist shows the right criteria
+          setDetailLead(movedLead ? { ...movedLead, stage_id: targetStageId } : null);
+          setDetailOpen(true);
+          toast.info("Please check at least one criterion to confirm moving this lead.");
           return;
         }
       }
@@ -436,7 +439,42 @@ const CRM = () => {
 
       <LeadDetailDialog
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={async (open) => {
+          if (!open && pendingMove) {
+            // Dialog closing — validate if at least one criterion was checked
+            const { data: criteria } = await supabase
+              .from("stage_criteria")
+              .select("id")
+              .eq("stage_id", pendingMove.targetStageId);
+
+            let hasChecked = false;
+            if (criteria && criteria.length > 0) {
+              const { data: checks } = await supabase
+                .from("lead_criteria_checks")
+                .select("criteria_id")
+                .eq("lead_id", pendingMove.leadId)
+                .in("criteria_id", criteria.map((c) => c.id))
+                .eq("checked", true);
+              hasChecked = (checks && checks.length > 0) || false;
+            } else {
+              hasChecked = true; // no criteria = no restriction
+            }
+
+            if (hasChecked) {
+              // Confirm the move
+              await supabase.from("leads").update({ stage_id: pendingMove.targetStageId }).eq("id", pendingMove.leadId);
+              toast.success("Lead moved successfully");
+            } else {
+              // Revert
+              setLeads((prev) =>
+                prev.map((l) => (l.id === pendingMove.leadId ? { ...l, stage_id: pendingMove.originalStageId } : l))
+              );
+              toast.error("Move cancelled — no criteria were checked.");
+            }
+            setPendingMove(null);
+          }
+          setDetailOpen(open);
+        }}
         lead={detailLead}
         onToggleAssign={handleToggleAssignment}
         assignmentsMap={assignmentsMap}
