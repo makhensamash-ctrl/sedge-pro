@@ -261,6 +261,7 @@ export type Database = {
           metadata: Json | null
           package_name: string
           payment_id: string | null
+          proof_url: string | null
           status: string
           updated_at: string
         }
@@ -275,6 +276,7 @@ export type Database = {
           metadata?: Json | null
           package_name: string
           payment_id?: string | null
+          proof_url?: string | null
           status?: string
           updated_at?: string
         }
@@ -289,6 +291,7 @@ export type Database = {
           metadata?: Json | null
           package_name?: string
           payment_id?: string | null
+          proof_url?: string | null
           status?: string
           updated_at?: string
         }

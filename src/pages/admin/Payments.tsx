@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Upload, FileText, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Payment {
@@ -18,6 +18,7 @@ interface Payment {
   status: string;
   customer_email: string | null;
   client_name: string | null;
+  proof_url: string | null;
   created_at: string;
 }
 
@@ -46,6 +47,7 @@ const Payments = () => {
   const [customAmount, setCustomAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("completed");
   const [completedLeads, setCompletedLeads] = useState<{ id: string; client_name: string; email: string | null; package: string | null }[]>([]);
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const fetchPayments = () => {
     supabase
@@ -73,6 +75,23 @@ const Payments = () => {
     if (!selectedPackage) return;
     setSaving(true);
 
+    let proofUrl: string | null = null;
+
+    // Upload proof of payment if attached
+    if (proofFile) {
+      const ext = proofFile.name.split(".").pop();
+      const filePath = `${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("payment-proofs").upload(filePath, proofFile);
+      if (uploadError) {
+        toast.error("Failed to upload proof: " + uploadError.message);
+        setSaving(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(filePath);
+      // Since bucket is private, store the path instead
+      proofUrl = filePath;
+    }
+
     const pkg = packages.find((p) => p.name === selectedPackage);
     const amountCents = customAmount ? Math.round(parseFloat(customAmount) * 100) : (pkg?.amount || 0);
 
@@ -81,6 +100,7 @@ const Payments = () => {
       amount_cents: amountCents,
       customer_email: customerEmail.trim() || null,
       client_name: clientName.trim() || null,
+      proof_url: proofUrl,
       status: paymentStatus,
       checkout_id: null,
       payment_id: null,
@@ -96,6 +116,7 @@ const Payments = () => {
       setSelectedPackage("");
       setCustomAmount("");
       setPaymentStatus("completed");
+      setProofFile(null);
       fetchPayments();
     }
     setSaving(false);
@@ -126,14 +147,15 @@ const Payments = () => {
               <TableHead>Email</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Proof</TableHead>
               <TableHead>Source</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
             ) : payments.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No payments yet</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payments yet</TableCell></TableRow>
             ) : payments.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="text-sm">{new Date(p.created_at).toLocaleDateString()}</TableCell>
@@ -143,6 +165,16 @@ const Payments = () => {
                 <TableCell>R{(p.amount_cents / 100).toLocaleString()}</TableCell>
                 <TableCell>
                   <Badge className={statusColor(p.status)}>{p.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  {(p as any).proof_url ? (
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={async () => {
+                      const { data } = await supabase.storage.from("payment-proofs").createSignedUrl((p as any).proof_url, 300);
+                      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                    }}>
+                      <FileText className="w-3 h-3 mr-1" /> View
+                    </Button>
+                  ) : <span className="text-muted-foreground text-xs">—</span>}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {p.checkout_id ? "Yoco" : "Manual"}
@@ -208,6 +240,30 @@ const Payments = () => {
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Proof of Payment</Label>
+              {proofFile ? (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="truncate flex-1">{proofFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setProofFile(null)}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 p-3 rounded-md border border-dashed border-muted-foreground/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Click to attach file</span>
+                  <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) { toast.error("File must be under 10MB"); return; }
+                      setProofFile(file);
+                    }
+                  }} />
+                </label>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={saving || !selectedPackage || !clientName}>
               {saving ? "Saving..." : "Record Payment"}
