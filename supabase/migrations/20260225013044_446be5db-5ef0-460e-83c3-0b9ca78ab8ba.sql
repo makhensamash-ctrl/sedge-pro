@@ -1,0 +1,1 @@
+ALTER TABLE public.payments ADD COLUMN client_name text;

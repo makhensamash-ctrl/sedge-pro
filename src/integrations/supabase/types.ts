@@ -253,6 +253,7 @@ export type Database = {
         Row: {
           amount_cents: number
           checkout_id: string | null
+          client_name: string | null
           created_at: string
           currency: string
           customer_email: string | null
@@ -266,6 +267,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           checkout_id?: string | null
+          client_name?: string | null
           created_at?: string
           currency?: string
           customer_email?: string | null
@@ -279,6 +281,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           checkout_id?: string | null
+          client_name?: string | null
           created_at?: string
           currency?: string
           customer_email?: string | null

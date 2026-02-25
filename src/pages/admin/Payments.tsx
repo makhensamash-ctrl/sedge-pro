@@ -17,6 +17,7 @@ interface Payment {
   amount_cents: number;
   status: string;
   customer_email: string | null;
+  client_name: string | null;
   created_at: string;
 }
 
@@ -40,6 +41,7 @@ const Payments = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customerEmail, setCustomerEmail] = useState("");
+  const [clientName, setClientName] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("");
   const [customAmount, setCustomAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("completed");
@@ -69,10 +71,11 @@ const Payments = () => {
       package_name: selectedPackage,
       amount_cents: amountCents,
       customer_email: customerEmail.trim() || null,
+      client_name: clientName.trim() || null,
       status: paymentStatus,
       checkout_id: null,
       payment_id: null,
-    });
+    } as any);
 
     if (error) {
       toast.error(error.message);
@@ -80,6 +83,7 @@ const Payments = () => {
       toast.success("Payment recorded");
       setDialogOpen(false);
       setCustomerEmail("");
+      setClientName("");
       setSelectedPackage("");
       setCustomAmount("");
       setPaymentStatus("completed");
@@ -108,8 +112,9 @@ const Payments = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>Client</TableHead>
               <TableHead>Package</TableHead>
-              <TableHead>Customer</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
@@ -117,13 +122,14 @@ const Payments = () => {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
             ) : payments.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No payments yet</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No payments yet</TableCell></TableRow>
             ) : payments.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="text-sm">{new Date(p.created_at).toLocaleDateString()}</TableCell>
-                <TableCell className="font-medium">{p.package_name}</TableCell>
+                <TableCell className="font-medium">{(p as any).client_name || "—"}</TableCell>
+                <TableCell>{p.package_name}</TableCell>
                 <TableCell className="text-sm">{p.customer_email || "—"}</TableCell>
                 <TableCell>R{(p.amount_cents / 100).toLocaleString()}</TableCell>
                 <TableCell>
@@ -154,6 +160,10 @@ const Payments = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Client Name *</Label>
+              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="John Doe" required maxLength={255} />
             </div>
             <div className="space-y-2">
               <Label>Customer Email</Label>
