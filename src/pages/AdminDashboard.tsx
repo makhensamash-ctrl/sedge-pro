@@ -3,7 +3,7 @@ import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLeadNotifications } from "@/hooks/useLeadNotifications";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, UserCheck, Package } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import MfaSetupDialog from "@/components/MfaSetupDialog";
@@ -14,7 +14,6 @@ const navItems = [
   { label: "Payments", icon: CreditCard, path: "/admin/payments" },
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
-  { label: "Salespersons", icon: UserCheck, path: "/admin/salespersons" },
   { label: "Packages", icon: Package, path: "/admin/packages" },
 ];
 
