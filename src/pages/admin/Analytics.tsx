@@ -6,6 +6,7 @@ import {
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
 import { Users, CreditCard, UserX, TrendingUp } from "lucide-react";
+import SalespersonPerformance from "@/components/analytics/SalespersonPerformance";
 
 const PALETTE = {
   navy: "hsl(210, 65%, 17%)",
@@ -279,6 +280,9 @@ const Analytics = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Salesperson Performance */}
+      <SalespersonPerformance />
     </div>
   );
 };
