@@ -45,6 +45,7 @@ const Payments = () => {
   const [selectedPackage, setSelectedPackage] = useState("");
   const [customAmount, setCustomAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("completed");
+  const [completedLeads, setCompletedLeads] = useState<{ id: string; client_name: string; email: string | null }[]>([]);
 
   const fetchPayments = () => {
     supabase
@@ -57,7 +58,15 @@ const Payments = () => {
       });
   };
 
-  useEffect(() => { fetchPayments(); }, []);
+  const fetchCompletedLeads = async () => {
+    const { data: stages } = await supabase.from("pipeline_stages").select("id, name");
+    const stage = (stages || []).find((s) => s.name === "Purchase Completed");
+    if (!stage) return;
+    const { data: leads } = await supabase.from("leads").select("id, client_name, email").eq("stage_id", stage.id);
+    setCompletedLeads(leads || []);
+  };
+
+  useEffect(() => { fetchPayments(); fetchCompletedLeads(); }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +172,18 @@ const Payments = () => {
             </div>
             <div className="space-y-2">
               <Label>Client Name *</Label>
-              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="John Doe" required maxLength={255} />
+              <Select value={clientName} onValueChange={(val) => {
+                setClientName(val);
+                const lead = completedLeads.find((l) => l.client_name === val);
+                if (lead?.email) setCustomerEmail(lead.email);
+              }}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>
+                  {completedLeads.map((l) => (
+                    <SelectItem key={l.id} value={l.client_name}>{l.client_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Customer Email</Label>
@@ -184,7 +204,7 @@ const Payments = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" className="w-full" disabled={saving || !selectedPackage}>
+            <Button type="submit" className="w-full" disabled={saving || !selectedPackage || !clientName}>
               {saving ? "Saving..." : "Record Payment"}
             </Button>
           </form>
