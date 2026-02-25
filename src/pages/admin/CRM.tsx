@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -41,6 +41,7 @@ const CRM = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const dragOriginalStageRef = useRef<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -167,9 +168,8 @@ const CRM = () => {
   const handleDragStart = (event: DragStartEvent) => {
     const lead = leads.find((l) => l.id === event.active.id);
     setActiveLead(lead || null);
-    // Store original stage for potential revert
     if (lead) {
-      (event.active.data as any).current.originalStageId = lead.stage_id;
+      dragOriginalStageRef.current = lead.stage_id;
     }
   };
 
@@ -206,7 +206,8 @@ const CRM = () => {
     const lead = leads.find((l) => l.id === activeId);
     if (!lead) return;
 
-    const originalStageId = (active.data as any).current?.originalStageId || lead.stage_id;
+    const originalStageId = dragOriginalStageRef.current || lead.stage_id;
+    dragOriginalStageRef.current = null;
 
     // Determine target stage
     const overLead = leads.find((l) => l.id === overId);
