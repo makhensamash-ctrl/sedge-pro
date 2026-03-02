@@ -11,7 +11,7 @@ const PopiaPolicy = () => (
         <div className="prose prose-sm max-w-none space-y-8 text-foreground/80">
           <section>
             <h2 className="text-xl font-semibold text-foreground">1. Introduction</h2>
-            <p>Sedgepro ("we," "us," or "our") is committed to protecting the privacy and personal information of our clients, website visitors, and partners. This policy outlines our practices regarding the collection and processing of personal information in accordance with the Protection of Personal Information Act (POPIA).</p>
+            <p>Sedge Pro is committed to protecting the privacy and personal information of our clients, website visitors, and partners. This policy outlines our practices regarding the collection and processing of personal information in accordance with the Protection of Personal Information Act (POPIA).</p>
           </section>
 
           <section>
