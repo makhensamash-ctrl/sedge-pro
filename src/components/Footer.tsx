@@ -35,7 +35,7 @@ const Footer = () => (
           <h4 className="font-semibold mb-4 text-accent">Legal</h4>
           <ul className="space-y-2 text-sm text-primary-foreground/70 mb-6">
             <li>
-              <a href="#" className="hover:text-accent transition-colors">
+              <a href="/popia-policy" className="hover:text-accent transition-colors">
                 POPIA Policy
               </a>
             </li>
