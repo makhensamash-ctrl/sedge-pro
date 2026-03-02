@@ -354,6 +354,42 @@ export type Database = {
         }
         Relationships: []
       }
+      revenue_targets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          period_month: number | null
+          period_quarter: number | null
+          period_type: string
+          period_year: number
+          target_amount_cents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_month?: number | null
+          period_quarter?: number | null
+          period_type: string
+          period_year: number
+          target_amount_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_month?: number | null
+          period_quarter?: number | null
+          period_type?: string
+          period_year?: number
+          target_amount_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       salespersons: {
         Row: {
           created_at: string
