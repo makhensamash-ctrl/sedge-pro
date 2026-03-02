@@ -32,7 +32,7 @@ const AboutSection = () =>
         <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
           About <span className="text-accent">SEDGE Pro</span>
         </h2>
-        <p className="text-muted-foreground text-lg leading-relaxed">SEDGE Pro assists contractors in building profitable and scalable businesses. Our hybrid platform combines powerful project management software with curated, on-demand expert support, so you're never alone in making critical decisions.
+        <p className="text-muted-foreground text-lg leading-relaxed">We help contractors build profitable and scalable businesses. Our affordable, easy-to-use software combines project, business, and site management activities on one platform with curated, on-demand expert support, so contractors can make evidence-based decisions.
 
 
 
