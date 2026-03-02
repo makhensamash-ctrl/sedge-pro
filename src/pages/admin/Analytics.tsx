@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -8,6 +8,8 @@ import {
 import { Users, CreditCard, UserX, TrendingUp } from "lucide-react";
 import SalespersonPerformance from "@/components/analytics/SalespersonPerformance";
 import DateRangeFilter, { DateRange } from "@/components/analytics/DateRangeFilter";
+import RevenueTargetDialog, { RevenueTarget } from "@/components/analytics/RevenueTargetDialog";
+import RevenueTargetProgress from "@/components/analytics/RevenueTargetProgress";
 
 const PALETTE = {
   navy: "hsl(210, 65%, 17%)",
@@ -33,6 +35,7 @@ const customTooltipStyle = {
 };
 
 const Analytics = () => {
+  const [targets, setTargets] = useState<RevenueTarget[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   const [chartData, setChartData] = useState<{ name: string; revenue: number; count: number }[]>([]);
   const [leadsByPackage, setLeadsByPackage] = useState<{ name: string; count: number }[]>([]);
@@ -41,6 +44,13 @@ const Analytics = () => {
   const [leadsByStage, setLeadsByStage] = useState<{ name: string; count: number; color: string }[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+
+  const fetchTargets = useCallback(async () => {
+    const { data } = await supabase.from("revenue_targets").select("*").order("period_year").order("period_month");
+    setTargets((data as RevenueTarget[]) || []);
+  }, []);
+
+  useEffect(() => { fetchTargets(); }, [fetchTargets]);
 
   useEffect(() => {
     const fromISO = dateRange.from?.toISOString();
@@ -116,10 +126,15 @@ const Analytics = () => {
           <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
           <p className="text-sm text-muted-foreground mt-1">Track your sales pipeline and revenue performance</p>
         </div>
-        <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
+        <div className="flex items-center gap-2">
+          <RevenueTargetDialog targets={targets} onRefresh={fetchTargets} />
+          <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
+        </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Revenue Target Progress */}
+      <RevenueTargetProgress targets={targets} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
           <Card key={stat.label} className="relative overflow-hidden border-0 shadow-md">
