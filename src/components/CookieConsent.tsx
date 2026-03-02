@@ -29,7 +29,7 @@ const CookieConsent = () => {
           <div className="container mx-auto max-w-4xl bg-card border border-border rounded-2xl shadow-xl p-5 flex flex-col sm:flex-row items-center gap-4">
             <p className="text-sm text-foreground/80 flex-1">
               We use cookies to improve your experience. By continuing to visit this site you agree to our use of cookies.{" "}
-              <a href="#" className="text-accent underline">Learn more</a>.
+              <a href="/popia-policy" className="text-accent underline">Learn more</a>.
             </p>
             <div className="flex gap-3 shrink-0">
               <button
