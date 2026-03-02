@@ -15,6 +15,7 @@ import Analytics from "./pages/admin/Analytics";
 import CRM from "./pages/admin/CRM";
 import Packages from "./pages/admin/Packages";
 import PopiaPolicy from "./pages/PopiaPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="packages" element={<Packages />} />
           </Route>
           <Route path="/popia-policy" element={<PopiaPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -40,7 +40,7 @@ const Footer = () => (
               </a>
             </li>
             <li>
-              <a href="#" className="hover:text-accent transition-colors">
+              <a href="/terms-of-service" className="hover:text-accent transition-colors">
                 Terms of Service
               </a>
             </li>
