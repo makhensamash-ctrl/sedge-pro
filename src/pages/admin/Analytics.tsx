@@ -123,10 +123,10 @@ const Analytics = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Analytics</h2>
           <p className="text-sm text-muted-foreground mt-1">Track your sales pipeline and revenue performance</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <RevenueTargetDialog targets={targets} onRefresh={fetchTargets} />
           <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
         </div>

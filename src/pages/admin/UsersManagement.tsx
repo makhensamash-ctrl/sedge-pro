@@ -208,7 +208,7 @@ const UsersManagement = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">User Management</h2>
+      <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">User Management</h2>
 
       <Tabs defaultValue="admins" className="w-full">
         <TabsList className="mb-4">
@@ -218,7 +218,7 @@ const UsersManagement = () => {
 
         <TabsContent value="admins">
           {isSuperAdmin && (
-            <div className="flex gap-2 mb-4 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:justify-end">
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                   <Button><UserPlus className="w-4 h-4 mr-2" />Create Admin</Button>
@@ -239,7 +239,7 @@ const UsersManagement = () => {
             </div>
           )}
 
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -305,7 +305,7 @@ const UsersManagement = () => {
             </Card>
           )}
 
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             {salespersons.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">No salespersons yet. Add one or import from admins above.</p>
             ) : (
