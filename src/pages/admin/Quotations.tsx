@@ -319,8 +319,10 @@ const Quotations = () => {
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm" onClick={() => viewQuotationDetails(q)}><Eye className="w-3 h-3" /></Button>
-                    {!q.converted_to_invoice && q.status === 'accepted' && (
+                    {!q.converted_to_invoice ? (
                       <Button variant="ghost" size="sm" onClick={() => convertToInvoice(q)} title="Convert to Invoice"><FileText className="w-3 h-3" /></Button>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">Converted</Badge>
                     )}
                     {q.business_profiles && (
                       <PDFDownloadLink
