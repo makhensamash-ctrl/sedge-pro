@@ -185,14 +185,14 @@ const Payments = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Payments</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Payments</h2>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Manual Payment
         </Button>
       </div>
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

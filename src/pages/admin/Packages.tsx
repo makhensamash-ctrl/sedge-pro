@@ -115,16 +115,16 @@ const Packages = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Packages</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Packages</h2>
           <p className="text-sm text-muted-foreground mt-1">Manage your service packages visible on the website</p>
         </div>
         <Button onClick={openAdd}><Plus className="w-4 h-4 mr-2" />Add Package</Button>
       </div>
 
       <Card className="border-0 shadow-md">
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 overflow-x-auto">
           {packages.length === 0 ? (
             <p className="text-muted-foreground text-center py-12">No packages yet. Add your first package.</p>
           ) : (
