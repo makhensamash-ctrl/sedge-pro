@@ -3,7 +3,7 @@ import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLeadNotifications } from "@/hooks/useLeadNotifications";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import MfaSetupDialog from "@/components/MfaSetupDialog";
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
   { label: "Packages", icon: Package, path: "/admin/packages" },
+  { label: "Business Profile", icon: Building2, path: "/admin/business-profile" },
 ];
 
 const AdminDashboard = () => {
