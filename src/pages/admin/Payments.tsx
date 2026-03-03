@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, FileText, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Plus, Upload, FileText, X, CalendarIcon, Filter, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface Payment {
@@ -48,6 +52,10 @@ const Payments = () => {
   const [paymentStatus, setPaymentStatus] = useState("completed");
   const [completedLeads, setCompletedLeads] = useState<{ id: string; client_name: string; email: string | null; package: string | null }[]>([]);
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const fetchPayments = () => {
     supabase
@@ -65,7 +73,6 @@ const Payments = () => {
     const stage = (stages || []).find((s) => s.name === "Purchase Completed");
     if (!stage) return;
     const { data: leads } = await supabase.from("leads").select("id, client_name, email, package").eq("stage_id", stage.id);
-    // Filter out leads that already have a completed payment recorded
     const { data: completedPayments } = await supabase.from("payments").select("customer_email, client_name").eq("status", "completed");
     const paidEmails = new Set((completedPayments || []).map((p) => p.customer_email?.toLowerCase()).filter(Boolean));
     const paidNames = new Set((completedPayments || []).map((p) => p.client_name?.toLowerCase()).filter(Boolean));
@@ -79,6 +86,22 @@ const Payments = () => {
 
   useEffect(() => { fetchPayments(); fetchCompletedLeads(); }, []);
 
+  const filteredPayments = useMemo(() => {
+    return payments.filter((p) => {
+      const matchesStatus = statusFilter === "All" || p.status === statusFilter;
+      const matchesSearch = !searchTerm ||
+        (p.client_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.customer_email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.package_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const paymentDate = new Date(p.created_at);
+      const fromDate = dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()) : null;
+      const toDate = dateTo ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999) : null;
+      const matchesFrom = !fromDate || paymentDate >= fromDate;
+      const matchesTo = !toDate || paymentDate <= toDate;
+      return matchesStatus && matchesSearch && matchesFrom && matchesTo;
+    });
+  }, [payments, statusFilter, searchTerm, dateFrom, dateTo]);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPackage) return;
@@ -86,7 +109,6 @@ const Payments = () => {
 
     let proofUrl: string | null = null;
 
-    // Upload proof of payment if attached
     if (proofFile) {
       const ext = proofFile.name.split(".").pop();
       const filePath = `${crypto.randomUUID()}.${ext}`;
@@ -96,8 +118,6 @@ const Payments = () => {
         setSaving(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(filePath);
-      // Since bucket is private, store the path instead
       proofUrl = filePath;
     }
 
@@ -118,7 +138,6 @@ const Payments = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      // If payment is completed, move matching lead to "Purchase Completed" stage
       if (paymentStatus === "completed" && clientName) {
         try {
           const { data: pcStage } = await supabase
@@ -130,7 +149,6 @@ const Payments = () => {
           if (pcStage) {
             const lead = completedLeads.find((l) => l.client_name === clientName);
             if (!lead) {
-              // Try to find by email if no exact client match in completed leads
               const emailToSearch = customerEmail.trim();
               if (emailToSearch) {
                 const { data: leadByEmail } = await supabase
@@ -157,7 +175,6 @@ const Payments = () => {
                 }
               }
             }
-            // If lead was already in completedLeads, it's already in Purchase Completed
           }
         } catch (e) {
           console.error("Failed to move lead to Purchase Completed:", e);
@@ -192,6 +209,51 @@ const Payments = () => {
           Add Manual Payment
         </Button>
       </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search client, email, package..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Statuses</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-full sm:w-auto justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateFrom ? format(dateFrom, "dd MMM yyyy") : "From date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-full sm:w-auto justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateTo ? format(dateTo, "dd MMM yyyy") : "To date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo || statusFilter !== "All" || searchTerm) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setStatusFilter("All"); setSearchTerm(""); }}>
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        )}
+      </div>
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -209,12 +271,12 @@ const Payments = () => {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
-            ) : payments.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payments yet</TableCell></TableRow>
-            ) : payments.map((p) => (
+            ) : filteredPayments.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payments found</TableCell></TableRow>
+            ) : filteredPayments.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="text-sm">{new Date(p.created_at).toLocaleDateString()}</TableCell>
-                <TableCell className="font-medium">{(p as any).client_name || "—"}</TableCell>
+                <TableCell className="font-medium">{p.client_name || "—"}</TableCell>
                 <TableCell>{p.package_name}</TableCell>
                 <TableCell className="text-sm">{p.customer_email || "—"}</TableCell>
                 <TableCell>R{(p.amount_cents / 100).toLocaleString()}</TableCell>
@@ -222,9 +284,9 @@ const Payments = () => {
                   <Badge className={statusColor(p.status)}>{p.status}</Badge>
                 </TableCell>
                 <TableCell>
-                  {(p as any).proof_url ? (
+                  {p.proof_url ? (
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={async () => {
-                      const { data } = await supabase.storage.from("payment-proofs").createSignedUrl((p as any).proof_url, 300);
+                      const { data } = await supabase.storage.from("payment-proofs").createSignedUrl(p.proof_url!, 300);
                       if (data?.signedUrl) window.open(data.signedUrl, "_blank");
                     }}>
                       <FileText className="w-3 h-3 mr-1" /> View

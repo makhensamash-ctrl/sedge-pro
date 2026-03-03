@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,8 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter } from "lucide-react";
+import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/invoicing/InvoicePDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
@@ -45,6 +49,8 @@ const Invoices = () => {
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProductAddDialogOpen, setIsProductAddDialogOpen] = useState(false);
   const [productPrefill, setProductPrefill] = useState<{ name: string; price: number } | null>(null);
@@ -117,7 +123,12 @@ const Invoices = () => {
   const filteredInvoices = invoices.filter(inv => {
     const matchesSearch = (inv.clients?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const invDate = new Date(inv.issue_date);
+    const fromDate = dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()) : null;
+    const toDate = dateTo ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999) : null;
+    const matchesFrom = !fromDate || invDate >= fromDate;
+    const matchesTo = !toDate || invDate <= toDate;
+    return matchesSearch && matchesStatus && matchesFrom && matchesTo;
   });
 
   const getStatusColor = (status: string) => {
@@ -283,13 +294,13 @@ const Invoices = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search invoices..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="All">All Statuses</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
@@ -299,6 +310,33 @@ const Invoices = () => {
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
         </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-full sm:w-auto justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateFrom ? format(dateFrom, "dd MMM yyyy") : "From date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-full sm:w-auto justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateTo ? format(dateTo, "dd MMM yyyy") : "To date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo || statusFilter !== "All" || searchTerm) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setStatusFilter("All"); setSearchTerm(""); }}>
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        )}
       </div>
 
       {/* Table */}
