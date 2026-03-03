@@ -30,7 +30,7 @@ const BusinessProfile = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-  const canEditBanking = user?.email === "nyiko@sedgeaccelerator.co.za";
+  const canEdit = user?.email === "nyiko@sedgeaccelerator.co.za";
   const [uploading, setUploading] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
@@ -48,7 +48,6 @@ const BusinessProfile = () => {
 
   const [form, setForm] = useState<Partial<BusinessProfile>>({});
 
-  // Sync form with fetched profile
   const currentForm: Partial<BusinessProfile> = {
     business_name: form.business_name ?? profile?.business_name ?? "",
     business_logo: form.business_logo ?? profile?.business_logo ?? "",
@@ -135,9 +134,12 @@ const BusinessProfile = () => {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className="w-6 h-6" /> Business Profile
+          {!canEdit && <Lock className="w-5 h-5 text-muted-foreground" />}
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          This information appears on your invoices and quotations.
+          {canEdit
+            ? "This information appears on your invoices and quotations."
+            : "Only nyiko@sedgeaccelerator.co.za can edit business profile details."}
         </p>
       </div>
 
@@ -158,21 +160,23 @@ const BusinessProfile = () => {
                     alt="Logo"
                     className="w-20 h-20 object-contain rounded-md border bg-background"
                   />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 w-6 h-6"
-                    onClick={() => update("business_logo", "")}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 w-6 h-6"
+                      onClick={() => update("business_logo", "")}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="w-20 h-20 border-2 border-dashed rounded-md flex items-center justify-center text-muted-foreground">
                   <Building2 className="w-8 h-8" />
                 </div>
               )}
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading || !canEdit}>
                 <Upload className="w-4 h-4 mr-2" />
                 {uploading ? "Uploading..." : "Upload Logo"}
               </Button>
@@ -183,21 +187,21 @@ const BusinessProfile = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="business_name">Business Name</Label>
-              <Input id="business_name" value={currentForm.business_name || ""} onChange={(e) => update("business_name", e.target.value)} placeholder="Your Company Name" />
+              <Input id="business_name" value={currentForm.business_name || ""} onChange={(e) => update("business_name", e.target.value)} placeholder="Your Company Name" disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact_phone">Contact Phone</Label>
-              <Input id="contact_phone" value={currentForm.contact_phone || ""} onChange={(e) => update("contact_phone", e.target.value)} placeholder="+27 12 345 6789" />
+              <Input id="contact_phone" value={currentForm.contact_phone || ""} onChange={(e) => update("contact_phone", e.target.value)} placeholder="+27 12 345 6789" disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="website_address">Website</Label>
-              <Input id="website_address" value={currentForm.website_address || ""} onChange={(e) => update("website_address", e.target.value)} placeholder="https://example.com" />
+              <Input id="website_address" value={currentForm.website_address || ""} onChange={(e) => update("website_address", e.target.value)} placeholder="https://example.com" disabled={!canEdit} />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="physical_address">Physical Address</Label>
-            <Textarea id="physical_address" value={currentForm.physical_address || ""} onChange={(e) => update("physical_address", e.target.value)} placeholder="123 Main Street, City, Province, Postal Code" className="min-h-20" />
+            <Textarea id="physical_address" value={currentForm.physical_address || ""} onChange={(e) => update("physical_address", e.target.value)} placeholder="123 Main Street, City, Province, Postal Code" className="min-h-20" disabled={!canEdit} />
           </div>
         </CardContent>
       </Card>
@@ -205,33 +209,26 @@ const BusinessProfile = () => {
       {/* Banking Details */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            Banking Details
-            {!canEditBanking && <Lock className="w-4 h-4 text-muted-foreground" />}
-          </CardTitle>
-          <CardDescription>
-            {canEditBanking
-              ? "Displayed on invoices for payment"
-              : "Only nyiko@sedgeaccelerator.co.za can edit banking details"}
-          </CardDescription>
+          <CardTitle className="text-lg">Banking Details</CardTitle>
+          <CardDescription>Displayed on invoices for payment</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="bank_name">Bank Name</Label>
-              <Input id="bank_name" value={currentForm.bank_name || ""} onChange={(e) => update("bank_name", e.target.value)} placeholder="e.g., FNB, Standard Bank" disabled={!canEditBanking} />
+              <Input id="bank_name" value={currentForm.bank_name || ""} onChange={(e) => update("bank_name", e.target.value)} placeholder="e.g., FNB, Standard Bank" disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="account_holder_name">Account Holder</Label>
-              <Input id="account_holder_name" value={currentForm.account_holder_name || ""} onChange={(e) => update("account_holder_name", e.target.value)} placeholder="Account holder name" disabled={!canEditBanking} />
+              <Input id="account_holder_name" value={currentForm.account_holder_name || ""} onChange={(e) => update("account_holder_name", e.target.value)} placeholder="Account holder name" disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="account_number">Account Number</Label>
-              <Input id="account_number" value={currentForm.account_number || ""} onChange={(e) => update("account_number", e.target.value)} placeholder="Account number" disabled={!canEditBanking} />
+              <Input id="account_number" value={currentForm.account_number || ""} onChange={(e) => update("account_number", e.target.value)} placeholder="Account number" disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="branch_code">Branch Code</Label>
-              <Input id="branch_code" value={currentForm.branch_code || ""} onChange={(e) => update("branch_code", e.target.value)} placeholder="Branch code" disabled={!canEditBanking} />
+              <Input id="branch_code" value={currentForm.branch_code || ""} onChange={(e) => update("branch_code", e.target.value)} placeholder="Branch code" disabled={!canEdit} />
             </div>
           </div>
         </CardContent>
@@ -249,16 +246,19 @@ const BusinessProfile = () => {
             onChange={(e) => update("terms_and_conditions", e.target.value)}
             placeholder="Enter your default terms and conditions..."
             className="min-h-32"
+            disabled={!canEdit}
           />
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="lg">
-          {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Save Profile
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="lg">
+            {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Save Profile
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
