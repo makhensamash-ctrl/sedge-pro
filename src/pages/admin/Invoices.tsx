@@ -257,6 +257,80 @@ const Invoices = () => {
           .eq('id', existingPayments[0].id);
       }
 
+      // When marked as paid, ensure a lead card exists in "Purchase Completed"
+      if (newStatus === 'paid' && invoice.clients) {
+        try {
+          const clientName = invoice.clients.name;
+          const clientEmail = invoice.clients.email;
+          const clientPhone = invoice.clients.phone;
+
+          const { data: pcStage } = await supabase
+            .from('pipeline_stages')
+            .select('id')
+            .eq('name', 'Purchase Completed')
+            .maybeSingle();
+
+          if (pcStage) {
+            // Check for existing lead by email or client name
+            let existingLead = null;
+
+            if (clientEmail) {
+              const { data: byEmail } = await supabase
+                .from('leads')
+                .select('id, stage_id')
+                .eq('email', clientEmail)
+                .limit(1)
+                .maybeSingle();
+              existingLead = byEmail;
+            }
+
+            if (!existingLead) {
+              const { data: byName } = await supabase
+                .from('leads')
+                .select('id, stage_id')
+                .eq('client_name', clientName)
+                .limit(1)
+                .maybeSingle();
+              existingLead = byName;
+            }
+
+            // Get next position in Purchase Completed
+            const { data: lastLead } = await supabase
+              .from('leads')
+              .select('position')
+              .eq('stage_id', pcStage.id)
+              .order('position', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const nextPosition = (lastLead?.position ?? -1) + 1;
+
+            if (existingLead) {
+              // Move existing lead to Purchase Completed if not already there
+              if (existingLead.stage_id !== pcStage.id) {
+                await supabase.from('leads').update({
+                  stage_id: pcStage.id,
+                  position: nextPosition,
+                  notes: `Invoice ${invoice.invoice_number} paid – R${Number(invoice.total_amount).toLocaleString()}`,
+                }).eq('id', existingLead.id);
+              }
+            } else {
+              // Create new lead in Purchase Completed
+              await supabase.from('leads').insert({
+                client_name: clientName,
+                email: clientEmail || null,
+                phone: clientPhone || null,
+                source: 'Invoice',
+                stage_id: pcStage.id,
+                position: nextPosition,
+                notes: `Invoice ${invoice.invoice_number} paid – R${Number(invoice.total_amount).toLocaleString()}`,
+              });
+            }
+          }
+        } catch (leadErr) {
+          console.error('Failed to update/create lead for paid invoice:', leadErr);
+        }
+      }
+
       toast.success(`Invoice status updated to ${newStatus}`);
       setViewingInvoice({ ...invoice, status: newStatus });
       refetch();
