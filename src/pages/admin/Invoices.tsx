@@ -367,7 +367,20 @@ const Invoices = () => {
                 <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                 <TableCell>{inv.clients?.name || '—'}</TableCell>
                 <TableCell>R{Number(inv.total_amount).toLocaleString()}</TableCell>
-                <TableCell><Badge className={getStatusColor(inv.status)}>{inv.status}</Badge></TableCell>
+                <TableCell>
+                  <Select value={inv.status} onValueChange={(val) => updateInvoiceStatus(inv, val)}>
+                    <SelectTrigger className="h-7 w-auto min-w-[120px] text-xs border-0 bg-transparent p-1">
+                      <Badge className={getStatusColor(inv.status)}>{inv.status}</Badge>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="invoice sent-awaiting payment">Sent</SelectItem>
+                      <SelectItem value="partially paid">Partially Paid</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell className="text-sm">{new Date(inv.issue_date).toLocaleDateString()}</TableCell>
                 <TableCell className="text-sm">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
