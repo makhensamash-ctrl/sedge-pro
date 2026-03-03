@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X } from "lucide-react";
+import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X, RefreshCw } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/invoicing/InvoicePDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
@@ -71,7 +71,8 @@ const Invoices = () => {
   };
 
   const [newInvoice, setNewInvoice] = useState({
-    invoice_number: generateInvoiceNumber(), client_id: "", business_profile_id: "", due_date: "", status: "draft"
+    invoice_number: generateInvoiceNumber(), client_id: "", business_profile_id: "", due_date: "", status: "draft",
+    is_recurring: false, recurrence_interval: "monthly", next_recurrence_date: ""
   });
 
   const { data: invoices = [], isLoading, refetch } = useQuery({
@@ -199,7 +200,10 @@ const Invoices = () => {
         invoice_number: newInvoice.invoice_number, client_id: newInvoice.client_id || null,
         business_profile_id: businessProfileId || null, amount: finalAmount, tax_amount: taxAmount,
         total_amount: totalAmount, due_date: newInvoice.due_date || null, status: newInvoice.status,
-        created_by: user?.id
+        created_by: user?.id,
+        is_recurring: newInvoice.is_recurring,
+        recurrence_interval: newInvoice.is_recurring ? newInvoice.recurrence_interval : null,
+        next_recurrence_date: newInvoice.is_recurring && newInvoice.next_recurrence_date ? newInvoice.next_recurrence_date : null,
       } as any).select(`*, clients(name, email)`).single();
 
       if (invoiceError) throw invoiceError;
@@ -228,7 +232,7 @@ const Invoices = () => {
 
       toast.success('Invoice created');
       setIsCreateOpen(false);
-      setNewInvoice({ invoice_number: generateInvoiceNumber(), client_id: "", business_profile_id: businessProfiles.length > 0 ? (businessProfiles.find((p: any) => p.is_default)?.id || businessProfiles[0]?.id) : "", due_date: "", status: "draft" });
+      setNewInvoice({ invoice_number: generateInvoiceNumber(), client_id: "", business_profile_id: businessProfiles.length > 0 ? (businessProfiles.find((p: any) => p.is_default)?.id || businessProfiles[0]?.id) : "", due_date: "", status: "draft", is_recurring: false, recurrence_interval: "monthly", next_recurrence_date: "" });
       setSelectedProducts([]);
       refetch();
     } catch (error: any) {
@@ -464,6 +468,43 @@ const Invoices = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Recurring Invoice Section */}
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="is-recurring"
+                  checked={newInvoice.is_recurring}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, is_recurring: e.target.checked })}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <Label htmlFor="is-recurring" className="text-sm font-medium cursor-pointer">Is this a recurring payment?</Label>
+              </div>
+              {newInvoice.is_recurring && (
+                <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                  <div>
+                    <Label>Recurrence Interval</Label>
+                    <Select value={newInvoice.recurrence_interval} onValueChange={(v) => setNewInvoice({ ...newInvoice, recurrence_interval: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Next Invoice Date</Label>
+                    <Input
+                      type="date"
+                      value={newInvoice.next_recurrence_date}
+                      onChange={(e) => setNewInvoice({ ...newInvoice, next_recurrence_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">

@@ -219,9 +219,13 @@ export type Database = {
           due_date: string | null
           id: string
           invoice_number: string
+          is_recurring: boolean
           issue_date: string
+          next_recurrence_date: string | null
           notes: string | null
           paid_amount: number | null
+          recurrence_interval: string | null
+          recurring_parent_id: string | null
           status: string
           tax_amount: number | null
           total_amount: number
@@ -238,9 +242,13 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_number: string
+          is_recurring?: boolean
           issue_date?: string
+          next_recurrence_date?: string | null
           notes?: string | null
           paid_amount?: number | null
+          recurrence_interval?: string | null
+          recurring_parent_id?: string | null
           status?: string
           tax_amount?: number | null
           total_amount?: number
@@ -257,9 +265,13 @@ export type Database = {
           due_date?: string | null
           id?: string
           invoice_number?: string
+          is_recurring?: boolean
           issue_date?: string
+          next_recurrence_date?: string | null
           notes?: string | null
           paid_amount?: number | null
+          recurrence_interval?: string | null
+          recurring_parent_id?: string | null
           status?: string
           tax_amount?: number | null
           total_amount?: number
@@ -278,6 +290,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_recurring_parent_id_fkey"
+            columns: ["recurring_parent_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
