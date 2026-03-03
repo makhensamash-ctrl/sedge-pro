@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Building2, Upload, Trash2, Save, Loader2 } from "lucide-react";
+import { Building2, Upload, Trash2, Save, Loader2, Lock } from "lucide-react";
 
 interface BusinessProfile {
   id: string;
@@ -28,6 +29,8 @@ interface BusinessProfile {
 const BusinessProfile = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const canEditBanking = user?.email === "nyiko@sedgeaccelerator.co.za";
   const [uploading, setUploading] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
@@ -202,26 +205,33 @@ const BusinessProfile = () => {
       {/* Banking Details */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Banking Details</CardTitle>
-          <CardDescription>Displayed on invoices for payment</CardDescription>
+          <CardTitle className="text-lg flex items-center gap-2">
+            Banking Details
+            {!canEditBanking && <Lock className="w-4 h-4 text-muted-foreground" />}
+          </CardTitle>
+          <CardDescription>
+            {canEditBanking
+              ? "Displayed on invoices for payment"
+              : "Only nyiko@sedgeaccelerator.co.za can edit banking details"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="bank_name">Bank Name</Label>
-              <Input id="bank_name" value={currentForm.bank_name || ""} onChange={(e) => update("bank_name", e.target.value)} placeholder="e.g., FNB, Standard Bank" />
+              <Input id="bank_name" value={currentForm.bank_name || ""} onChange={(e) => update("bank_name", e.target.value)} placeholder="e.g., FNB, Standard Bank" disabled={!canEditBanking} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="account_holder_name">Account Holder</Label>
-              <Input id="account_holder_name" value={currentForm.account_holder_name || ""} onChange={(e) => update("account_holder_name", e.target.value)} placeholder="Account holder name" />
+              <Input id="account_holder_name" value={currentForm.account_holder_name || ""} onChange={(e) => update("account_holder_name", e.target.value)} placeholder="Account holder name" disabled={!canEditBanking} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="account_number">Account Number</Label>
-              <Input id="account_number" value={currentForm.account_number || ""} onChange={(e) => update("account_number", e.target.value)} placeholder="Account number" />
+              <Input id="account_number" value={currentForm.account_number || ""} onChange={(e) => update("account_number", e.target.value)} placeholder="Account number" disabled={!canEditBanking} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="branch_code">Branch Code</Label>
-              <Input id="branch_code" value={currentForm.branch_code || ""} onChange={(e) => update("branch_code", e.target.value)} placeholder="Branch code" />
+              <Input id="branch_code" value={currentForm.branch_code || ""} onChange={(e) => update("branch_code", e.target.value)} placeholder="Branch code" disabled={!canEditBanking} />
             </div>
           </div>
         </CardContent>
