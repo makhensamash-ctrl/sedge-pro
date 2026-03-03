@@ -36,6 +36,7 @@ const statusColor = (s: string) => {
   switch (s) {
     case "completed": return "bg-accent text-accent-foreground";
     case "failed": return "bg-destructive text-destructive-foreground";
+    case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
     default: return "bg-muted text-muted-foreground";
   }
 };
