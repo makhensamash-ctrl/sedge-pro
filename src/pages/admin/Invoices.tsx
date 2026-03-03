@@ -156,6 +156,12 @@ const Invoices = () => {
     }
   };
 
+  const mapInvoiceStatusToPayment = (status: string) => {
+    if (status === "paid") return "completed";
+    if (status === "overdue") return "failed";
+    return "pending";
+  };
+
   const addInvoice = async () => {
     if (!newInvoice.invoice_number.trim()) { toast.error('Invoice number is required'); return; }
     if (!newInvoice.client_id) { toast.error('Please select a client'); return; }
@@ -183,7 +189,7 @@ const Invoices = () => {
         business_profile_id: businessProfileId || null, amount: finalAmount, tax_amount: taxAmount,
         total_amount: totalAmount, due_date: newInvoice.due_date || null, status: newInvoice.status,
         created_by: user?.id
-      } as any).select().single();
+      } as any).select(`*, clients(name, email)`).single();
 
       if (invoiceError) throw invoiceError;
 
@@ -195,6 +201,20 @@ const Invoices = () => {
       const { error: lineItemsError } = await supabase.from('invoice_line_items').insert(lineItems);
       if (lineItemsError) throw lineItemsError;
 
+      // Create corresponding payment record
+      const clientName = invoiceData.clients?.name || '';
+      const clientEmail = invoiceData.clients?.email || null;
+      await supabase.from('payments').insert({
+        package_name: `Invoice ${invoiceData.invoice_number}`,
+        amount_cents: Math.round(totalAmount * 100),
+        client_name: clientName,
+        customer_email: clientEmail,
+        status: mapInvoiceStatusToPayment(newInvoice.status),
+        checkout_id: null,
+        payment_id: null,
+        metadata: { invoice_id: invoiceData.id, source: 'invoice' },
+      } as any);
+
       toast.success('Invoice created');
       setIsCreateOpen(false);
       setNewInvoice({ invoice_number: generateInvoiceNumber(), client_id: "", business_profile_id: businessProfiles.length > 0 ? (businessProfiles.find((p: any) => p.is_default)?.id || businessProfiles[0]?.id) : "", due_date: "", status: "draft" });
@@ -202,6 +222,31 @@ const Invoices = () => {
       refetch();
     } catch (error: any) {
       toast.error(`Failed to create invoice: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  const updateInvoiceStatus = async (invoice: Invoice, newStatus: string) => {
+    try {
+      const { error } = await supabase.from('invoices').update({ status: newStatus }).eq('id', invoice.id);
+      if (error) throw error;
+
+      // Update corresponding payment record
+      const { data: existingPayments } = await supabase
+        .from('payments')
+        .select('id, metadata')
+        .filter('metadata->>invoice_id', 'eq', invoice.id);
+
+      if (existingPayments && existingPayments.length > 0) {
+        await supabase.from('payments')
+          .update({ status: mapInvoiceStatusToPayment(newStatus) })
+          .eq('id', existingPayments[0].id);
+      }
+
+      toast.success(`Invoice status updated to ${newStatus}`);
+      setViewingInvoice({ ...invoice, status: newStatus });
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to update status: ${error?.message || 'Unknown error'}`);
     }
   };
 
@@ -399,7 +444,19 @@ const Invoices = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{viewingInvoice.clients?.name || '—'}</span></div>
-                <div><span className="text-muted-foreground">Status:</span> <Badge className={getStatusColor(viewingInvoice.status)}>{viewingInvoice.status}</Badge></div>
+               <div><span className="text-muted-foreground">Status:</span> <Badge className={getStatusColor(viewingInvoice.status)}>{viewingInvoice.status}</Badge></div>
+               <div><span className="text-muted-foreground">Update Status:</span>
+                 <Select value={viewingInvoice.status} onValueChange={(v) => updateInvoiceStatus(viewingInvoice, v)}>
+                   <SelectTrigger className="w-full mt-1"><SelectValue /></SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="draft">Draft</SelectItem>
+                     <SelectItem value="invoice sent-awaiting payment">Sent</SelectItem>
+                     <SelectItem value="partially paid">Partially Paid</SelectItem>
+                     <SelectItem value="paid">Paid</SelectItem>
+                     <SelectItem value="overdue">Overdue</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
                 <div><span className="text-muted-foreground">Issue Date:</span> {new Date(viewingInvoice.issue_date).toLocaleDateString()}</div>
                 <div><span className="text-muted-foreground">Due Date:</span> {viewingInvoice.due_date ? new Date(viewingInvoice.due_date).toLocaleDateString() : '—'}</div>
               </div>
