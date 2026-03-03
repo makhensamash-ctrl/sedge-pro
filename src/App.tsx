@@ -14,6 +14,8 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import Analytics from "./pages/admin/Analytics";
 import CRM from "./pages/admin/CRM";
 import Packages from "./pages/admin/Packages";
+import Invoices from "./pages/admin/Invoices";
+import Quotations from "./pages/admin/Quotations";
 import PopiaPolicy from "./pages/PopiaPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="users" element={<UsersManagement />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="packages" element={<Packages />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="quotations" element={<Quotations />} />
           </Route>
           <Route path="/popia-policy" element={<PopiaPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
