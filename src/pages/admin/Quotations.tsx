@@ -219,7 +219,7 @@ const Quotations = () => {
         tax_amount: quotation.tax_amount || 0, total_amount: quotation.total_amount,
         status: 'draft', description: quotation.description, notes: quotation.notes,
         currency: quotation.currency || 'ZAR', created_by: user?.id
-      } as any).select().single();
+      } as any).select(`*, clients(name, email)`).single();
 
       if (invoiceError) throw invoiceError;
 
@@ -231,11 +231,24 @@ const Quotations = () => {
         await supabase.from('invoice_line_items').insert(invoiceLineItems);
       }
 
+      // Create corresponding payment record
+      await supabase.from('payments').insert({
+        package_name: `Invoice ${invoiceNumber}`,
+        amount_cents: Math.round(quotation.total_amount * 100),
+        client_name: (newInvoice as any).clients?.name || quotation.clients?.name || '',
+        customer_email: (newInvoice as any).clients?.email || quotation.clients?.email || null,
+        status: 'pending',
+        checkout_id: null,
+        payment_id: null,
+        metadata: { invoice_id: newInvoice.id, source: 'invoice' },
+      } as any);
+
       await supabase.from('quotations').update({ converted_to_invoice: true }).eq('id', quotation.id);
 
       toast.success(`Converted to invoice ${invoiceNumber}`);
       refetch();
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
     } catch (error) {
       toast.error('Failed to convert quotation');
     }
