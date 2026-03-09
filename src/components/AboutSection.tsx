@@ -32,24 +32,24 @@ const AboutSection = () =>
         <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
           About <span className="text-accent">SEDGE Pro</span>
         </h2>
-        <p className="text-muted-foreground text-lg leading-relaxed">We help contractors build profitable and scalable businesses. Our affordable, easy-to-use software combines project, business, and site management activities on one platform with curated, on-demand expert support, so contractors can make evidence-based decisions.
+        <p className="text-muted-foreground text-lg leading-relaxed">SEDGE Pro powers better project performance through a hybrid model that combines powerful project management software with on-demand project expertise. We exist to strengthen service delivery excellence, value for money, and shared success across the built environment. By aligning digital systems with practical industry expertise, we help drive better outcomes for organisations, projects, and the construction sector as a whole.
 
 
 
 
 
+      
+      
+      
+      
+      
       </p>
       </motion.div>
 
       <div className="grid md:grid-cols-3 gap-8">
-        {highlights.map((h, i) =>
-      <motion.div
-        key={h.title}
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: i * 0.15 }}
-        className="bg-card rounded-xl p-8 shadow-sm border border-border hover:shadow-md transition-shadow text-center">
+        {highlights.map((h, i) => <motion.div key={h.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: i * 0.15 }}
+      className="bg-card rounded-xl p-8 shadow-sm border border-border hover:shadow-md transition-shadow text-center">
 
             <div className="w-14 h-14 rounded-full bg-green-light flex items-center justify-center mx-auto mb-5">
               <h.icon className="w-7 h-7 text-accent" />
