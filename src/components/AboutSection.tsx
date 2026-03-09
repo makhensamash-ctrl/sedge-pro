@@ -4,18 +4,18 @@ import { ShieldCheck, Users, BarChart3 } from "lucide-react";
 const highlights = [
 {
   icon: ShieldCheck,
-  title: "Trusted Platform",
-  desc: "Built for contractors by construction professionals, so no professionals are required to use it."
+  title: "Contractor Performance & Profitability",
+  desc: "We equip contractors with structured systems and expert support to improve financial visibility, strengthen control, and build resilient businesses."
 },
 {
   icon: Users,
-  title: "Expert Support",
-  desc: "We don't just provide you with software, we give you project and business support."
+  title: "Oversight & Industry Performance",
+  desc: "We provide developers, associations, and regulators with digital infrastructure that strengthens oversight, enables sector monitoring, and maintains audit-ready project records, enhancing accountability and service delivery"
 },
 {
   icon: BarChart3,
-  title: "Scalable Growth",
-  desc: "We help contractors know their numbers and grow their profits with our systems support."
+  title: "Structured Professional Collaboration",
+  desc: "We support consultants and project professionals with clear workflows, documentation controls, and reporting systems that improve coordination and reduce execution risk."
 }];
 
 
