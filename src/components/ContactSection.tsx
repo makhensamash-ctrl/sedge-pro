@@ -93,7 +93,7 @@ const ContactSection = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-primary">Call Us</h4>
-                <p className="text-muted-foreground text-sm">+27 (0) 10 000 0000</p>
+                <p className="text-muted-foreground text-sm">065 075 3731</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
