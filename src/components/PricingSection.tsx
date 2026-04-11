@@ -115,10 +115,10 @@ const PricingSection = () => {
           className="text-center mb-14"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
-            Contractor <span className="text-accent">Packages</span>
+            Project Control System <span className="text-accent">Modules</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Choose the package that fits your project needs.
+            A comprehensive set of modules designed to support planning, procurement, delivery, and performance across your projects.
           </p>
         </motion.div>
 
