@@ -92,13 +92,15 @@ const AprilPromotion = () => {
             fraction of the cost through our exclusive launch offer.
           </p>
 
-          <p className="text-primary-foreground/60 mb-8">
-            Valued at over{" "}
-            <span className="line-through text-primary-foreground/40">
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <span className="text-2xl md:text-3xl line-through text-primary-foreground/40 font-semibold">
               R100,000
-            </span>{" "}
-            <span className="text-accent font-bold">per year</span>
-          </p>
+            </span>
+            <span className="text-4xl md:text-5xl font-extrabold text-accent">
+              R20,000
+            </span>
+            <span className="text-primary-foreground/60 text-sm">per year</span>
+          </div>
         </motion.div>
 
         {/* Countdown */}
