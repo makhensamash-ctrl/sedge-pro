@@ -160,17 +160,15 @@ const AprilPromotion = () => {
         >
           <Button
             size="lg"
-            onClick={() =>
-              document
-                .getElementById("pricing")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => setDialogOpen(true)}
             className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-10 py-6 text-base font-bold shadow-lg shadow-accent/25 animate-pulse"
           >
             Join Early Bird Promotion
           </Button>
         </motion.div>
       </div>
+
+      <EarlyBirdDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </section>
   );
 };
