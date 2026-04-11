@@ -75,7 +75,7 @@ const Packages = () => {
     const features = featuresText.split("\n").map((f) => f.trim()).filter(Boolean);
     const payload = {
       name: name.trim(),
-      price_cents: Math.round(parseFloat(priceCents) * 100),
+      price_cents: 0,
       description: description.trim() || null,
       features,
       is_popular: isPopular,
