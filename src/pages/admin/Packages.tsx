@@ -69,7 +69,7 @@ const Packages = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !priceCents) return;
+    if (!name.trim()) return;
     setSaving(true);
 
     const features = featuresText.split("\n").map((f) => f.trim()).filter(Boolean);
