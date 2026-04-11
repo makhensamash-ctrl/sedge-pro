@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Check, Clock, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import EarlyBirdDialog from "@/components/EarlyBirdDialog";
 
 const DEADLINE = new Date("2026-04-30T23:59:59").getTime();
 
@@ -16,6 +17,7 @@ const features = [
 
 const AprilPromotion = () => {
   const [timeLeft, setTimeLeft] = useState(DEADLINE - Date.now());
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -158,17 +160,15 @@ const AprilPromotion = () => {
         >
           <Button
             size="lg"
-            onClick={() =>
-              document
-                .getElementById("pricing")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => setDialogOpen(true)}
             className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-10 py-6 text-base font-bold shadow-lg shadow-accent/25 animate-pulse"
           >
             Join Early Bird Promotion
           </Button>
         </motion.div>
       </div>
+
+      <EarlyBirdDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </section>
   );
 };
