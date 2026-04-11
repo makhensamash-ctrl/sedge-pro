@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Check, Clock, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import EarlyBirdDialog from "@/components/EarlyBirdDialog";
 
 const DEADLINE = new Date("2026-04-30T23:59:59").getTime();
 
