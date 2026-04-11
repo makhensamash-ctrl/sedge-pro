@@ -132,7 +132,7 @@ const Packages = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Price</TableHead>
+                  
                   <TableHead>Features</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-28">Actions</TableHead>
@@ -147,7 +147,7 @@ const Packages = () => {
                         {pkg.is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
                       </div>
                     </TableCell>
-                    <TableCell>{formatPrice(pkg.price_cents)}</TableCell>
+                    
                     <TableCell className="text-sm text-muted-foreground">{pkg.features.length} features</TableCell>
                     <TableCell>
                       <Badge
@@ -181,10 +181,6 @@ const Packages = () => {
             <div className="space-y-2">
               <Label>Package Name *</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Profitability Management" />
-            </div>
-            <div className="space-y-2">
-              <Label>Price (ZAR) *</Label>
-              <Input type="number" step="0.01" min="0" value={priceCents} onChange={(e) => setPriceCents(e.target.value)} required placeholder="9997.00" />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
