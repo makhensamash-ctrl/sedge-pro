@@ -17,6 +17,7 @@ const features = [
 
 const AprilPromotion = () => {
   const [timeLeft, setTimeLeft] = useState(DEADLINE - Date.now());
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
