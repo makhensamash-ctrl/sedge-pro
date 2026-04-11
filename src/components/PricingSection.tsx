@@ -144,7 +144,7 @@ const PricingSection = () => {
                 <h3 className="text-lg font-bold text-primary mb-2 leading-tight min-h-[3.5rem] flex items-center justify-center">
                   {pkg.name}
                 </h3>
-                <div className="text-3xl font-extrabold text-accent mb-1">{formatPrice(pkg.price_cents)}</div>
+                
                 {pkg.description && (
                   <span className="text-sm text-muted-foreground">{pkg.description}</span>
                 )}
@@ -223,7 +223,7 @@ const PricingSection = () => {
               </Select>
             </div>
             <Button type="submit" className="w-full" disabled={loadingPkg !== null || !heardAbout}>
-              {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg ? formatPrice(selectedPkg.price_cents) : ""}`}
+              {loadingPkg ? "Redirecting..." : "Proceed"}
             </Button>
           </form>
         </DialogContent>
