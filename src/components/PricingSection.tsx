@@ -223,7 +223,7 @@ const PricingSection = () => {
               </Select>
             </div>
             <Button type="submit" className="w-full" disabled={loadingPkg !== null || !heardAbout}>
-              {loadingPkg ? "Redirecting..." : `Pay ${selectedPkg ? formatPrice(selectedPkg.price_cents) : ""}`}
+              {loadingPkg ? "Redirecting..." : "Proceed"}
             </Button>
           </form>
         </DialogContent>
