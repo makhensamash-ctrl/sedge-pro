@@ -40,7 +40,7 @@ const HeroSection = () =>
               Watch Demo
             </a>
             <a
-            href="#pricing"
+            href="#prelaunch-promotion"
             className="bg-accent text-accent-foreground px-7 py-3 rounded-full font-semibold hover:bg-green-dark transition-colors">
 
               View Prelaunch Promotion
