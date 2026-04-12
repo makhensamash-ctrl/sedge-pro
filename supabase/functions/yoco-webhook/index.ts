@@ -16,7 +16,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log("Yoco webhook received:", JSON.stringify(body));
 
-    const eventType = body.type; // e.g. "payment.succeeded", "payment.failed"
+    const eventType = body.type;
     const payload = body.payload;
 
     if (!payload) {
@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const checkoutId = payload.metadata?.checkoutId;
     const paymentId = payload.id;
-    const status = payload.status; // "succeeded" or "failed"
+    const status = payload.status;
 
     if (!checkoutId) {
       console.log("No checkoutId in webhook payload, skipping");
@@ -61,6 +61,28 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating payment:", updateError);
+    }
+
+    // Update invoice status based on payment result
+    if (payment) {
+      const invoiceId = (payment.metadata as any)?.invoiceId;
+      if (invoiceId) {
+        if (newStatus === "completed") {
+          // Mark invoice as paid
+          await supabaseAdmin
+            .from("invoices")
+            .update({ status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", invoiceId);
+          console.log(`Invoice ${invoiceId} marked as paid`);
+        } else if (newStatus === "failed") {
+          // Mark invoice as unconfirmed
+          await supabaseAdmin
+            .from("invoices")
+            .update({ status: "unconfirmed", updated_at: new Date().toISOString() })
+            .eq("id", invoiceId);
+          console.log(`Invoice ${invoiceId} marked as unconfirmed`);
+        }
+      }
     }
 
     // If payment succeeded, move lead to Won stage
