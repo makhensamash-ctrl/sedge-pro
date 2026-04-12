@@ -41,7 +41,7 @@ const steps = [
   {
     icon: TrendingUp,
     num: "07",
-    title: "Continuous Improvement",
+    title: "Continual Improvement",
     desc: "Stakeholders received customised continual improvement reports and industry insights.",
   },
 ];
