@@ -43,7 +43,7 @@ const HeroSection = () =>
             href="#pricing"
             className="bg-accent text-accent-foreground px-7 py-3 rounded-full font-semibold hover:bg-green-dark transition-colors">
 
-              View Contractor Packages
+              View Prelaunch Promotion
             </a>
           </div>
         </motion.div>
