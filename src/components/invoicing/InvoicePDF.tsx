@@ -137,7 +137,24 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
           </View>
 
           <View style={styles.headerColumn}>
-            <Text style={styles.columnLabel}>Date</Text>
+            <Text style={styles.columnLabel}>Bill To</Text>
+            <Text style={styles.businessName}>
+              {invoice.client?.company || invoice.client?.name || 'Customer Name'}
+            </Text>
+            {invoice.client?.company && invoice.client?.name && (
+              <Text style={styles.businessDetails}>{invoice.client.name}</Text>
+            )}
+            {invoice.client?.email && (
+              <Text style={styles.businessDetails}>{invoice.client.email}</Text>
+            )}
+            {invoice.client?.address && (
+              <Text style={styles.businessDetails}>{invoice.client.address}</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+          <View>
             <Text style={styles.dateLabel}>Issue Date</Text>
             <Text style={styles.dateValue}>{formatDate(invoice.issue_date)}</Text>
             {invoice.due_date && (
@@ -147,34 +164,9 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
               </>
             )}
           </View>
-        </View>
-
-        <View style={styles.billToSection}>
-          <View style={styles.billToHeader}>
-            <Text style={styles.billToTitle}>BILL TO</Text>
-          </View>
-          <View style={styles.billToContent}>
-            <View style={styles.billToLeft}>
-              <Text style={styles.clientName}>
-                {invoice.client?.company || invoice.client?.name || 'Customer Name'}
-              </Text>
-              {invoice.client?.company && invoice.client?.name && (
-                <Text style={styles.clientDetails}>{invoice.client.name}</Text>
-              )}
-              {invoice.client?.email && (
-                <Text style={styles.clientDetails}>{invoice.client.email}</Text>
-              )}
-              {invoice.client?.address && (
-                <Text style={styles.clientDetails}>{invoice.client.address}</Text>
-              )}
-              {invoice.client?.phone && (
-                <Text style={styles.clientDetails}>{invoice.client.phone}</Text>
-              )}
-            </View>
-            <View style={styles.billToRight}>
-              <Text style={styles.balanceLabel}>BALANCE DUE</Text>
-              <Text style={styles.balanceValue}>{formatCurrency(invoice.total_amount)}</Text>
-            </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.balanceLabel}>BALANCE DUE</Text>
+            <Text style={styles.balanceValue}>{formatCurrency(invoice.total_amount)}</Text>
           </View>
         </View>
 
