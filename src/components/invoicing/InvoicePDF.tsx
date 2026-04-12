@@ -161,7 +161,6 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
               {invoice.client?.company && invoice.client?.name && (
                 <Text style={styles.clientDetails}>{invoice.client.name}</Text>
               )}
-              </Text>
               {invoice.client?.email && (
                 <Text style={styles.clientDetails}>{invoice.client.email}</Text>
               )}
