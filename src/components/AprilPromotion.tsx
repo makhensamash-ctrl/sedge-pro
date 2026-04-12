@@ -47,7 +47,7 @@ const AprilPromotion = () => {
   ];
 
   return (
-    <section className="relative py-16 md:py-24 bg-gradient-to-br from-primary via-[hsl(var(--navy-light))] to-primary overflow-hidden">
+    <section id="prelaunch-promotion" className="relative py-16 md:py-24 bg-gradient-to-br from-primary via-[hsl(var(--navy-light))] to-primary overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-72 h-72 bg-accent rounded-full blur-3xl" />
@@ -63,7 +63,7 @@ const AprilPromotion = () => {
       >
         <span className="inline-flex items-center gap-1.5 bg-accent text-accent-foreground text-xs font-bold px-4 py-2 rounded-full shadow-lg">
           <Clock className="w-3.5 h-3.5" />
-          APRIL ONLY
+          PRE-LAUNCH ONLY
         </span>
       </motion.div>
 
@@ -78,20 +78,20 @@ const AprilPromotion = () => {
           <div className="inline-flex items-center gap-2 text-accent mb-4">
             <Sparkles className="w-5 h-5" />
             <span className="text-sm font-semibold tracking-widest uppercase">
-              April Launch Special Offer
+              Pre-Launch Special Offer
             </span>
             <Sparkles className="w-5 h-5" />
           </div>
 
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-            Exclusive Launch Pricing,{" "}
-            <span className="text-accent">Available This Month Only</span>
+            Exclusive Pre-Launch Pricing,{" "}
+            <span className="text-accent">Limited Time Only</span>
           </h2>
 
           <p className="text-primary-foreground/80 text-base md:text-lg mb-2 leading-relaxed">
-            We've officially launched our system, and for this April only, you
+            We've officially launched our system, and for a limited time, you
             can access our complete platform and expert support services for a
-            fraction of the cost through our exclusive launch offer.
+            fraction of the cost through our exclusive pre-launch offer.
           </p>
 
           <div className="flex items-center justify-center gap-4 mb-8">
@@ -163,7 +163,7 @@ const AprilPromotion = () => {
             onClick={() => setDialogOpen(true)}
             className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-10 py-6 text-base font-bold shadow-lg shadow-accent/25 animate-pulse"
           >
-            Join Early Bird Promotion
+            Join Pre-Launch Promotion
           </Button>
         </motion.div>
       </div>
