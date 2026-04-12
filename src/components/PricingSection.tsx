@@ -159,17 +159,6 @@ const PricingSection = () => {
                 ))}
               </ul>
 
-              <Button
-                onClick={() => handleSignUp(pkg)}
-                disabled={loadingPkg !== null}
-                className={`w-full rounded-full font-semibold ${
-                  pkg.is_popular
-                    ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
-              >
-                {loadingPkg === pkg.name ? "Loading..." : "Sign Up Now"}
-              </Button>
             </motion.div>
           ))}
         </div>
