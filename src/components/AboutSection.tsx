@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ShieldCheck, Users, BarChart3 } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, GraduationCap } from "lucide-react";
 
 const highlights = [
 {
@@ -16,6 +16,11 @@ const highlights = [
   icon: BarChart3,
   title: "Structured Professional Collaboration",
   desc: "We provide a digital collaborative platform that construction value chain stakeholders for efficient and high-quality development of projects across the various IDMS stages from project planning, design development, documentation, procurement, execution, handover and closeout."
+},
+{
+  icon: GraduationCap,
+  title: "Graduate Professional Development",
+  desc: "We provide unemployed graduates with professional mentoring, relevant experience, link their post graduate research to industry needs whilst providing affordable industry capacity to contractors, clients and consultants."
 }];
 
 
