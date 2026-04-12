@@ -3,7 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -28,6 +30,8 @@ const paymentPlans = [
   },
 ];
 
+const heardAboutOptions = ["Google Search", "Social Media", "Referral", "Industry Event", "Word of Mouth", "Other"];
+
 const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
   const [step, setStep] = useState<"form" | "success">("form");
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +39,10 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
     client_name: "",
     email: "",
     phone: "",
-    company: "",
+    businessName: "",
+    regNumber: "",
+    billingAddress: "",
+    heardAbout: "",
     plan: "once-off",
   });
 
@@ -45,26 +52,33 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.client_name.trim() || !formData.email.trim()) {
-      toast.error("Please fill in your name and email.");
+    if (!formData.client_name.trim() || !formData.email.trim() || !formData.businessName.trim()) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     setSubmitting(true);
     try {
       const selectedPlan = paymentPlans.find((p) => p.id === formData.plan);
+      const notesParts = [
+        `Payment plan: ${selectedPlan?.label} (${selectedPlan?.price})`,
+        `Business: ${formData.businessName}`,
+        formData.regNumber ? `Reg Number: ${formData.regNumber}` : null,
+        formData.billingAddress ? `Billing Address: ${formData.billingAddress}` : null,
+        formData.heardAbout ? `Heard about us: ${formData.heardAbout}` : null,
+      ].filter(Boolean).join("\n");
+
       const { error } = await supabase.functions.invoke("create-lead", {
         body: {
           client_name: formData.client_name.trim(),
           email: formData.email.trim(),
           phone: formData.phone.trim() || null,
-          source: "Early Bird Promotion",
-          notes: `Payment plan: ${selectedPlan?.label} (${selectedPlan?.price})${formData.company ? `\nCompany: ${formData.company}` : ""}`,
+          source: "Pre-Launch Promotion",
+          notes: notesParts,
         },
       });
 
       if (error) throw error;
-
       setStep("success");
     } catch (err: any) {
       toast.error(err.message || "Something went wrong. Please try again.");
@@ -77,7 +91,7 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
     if (!open) {
       setTimeout(() => {
         setStep("form");
-        setFormData({ client_name: "", email: "", phone: "", company: "", plan: "once-off" });
+        setFormData({ client_name: "", email: "", phone: "", businessName: "", regNumber: "", billingAddress: "", heardAbout: "", plan: "once-off" });
       }, 300);
     }
     onOpenChange(open);
@@ -89,7 +103,7 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
         {step === "form" ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl">Join the Early Bird Promotion</DialogTitle>
+              <DialogTitle className="text-xl">Join the Pre-Launch Promotion</DialogTitle>
               <DialogDescription>
                 Secure your spot at exclusive launch pricing. Fill in your details and choose a payment plan.
               </DialogDescription>
@@ -125,22 +139,58 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
                   <Input
                     id="eb-phone"
                     type="tel"
-                    placeholder="+27 ..."
+                    placeholder="+27 82 123 4567"
                     value={formData.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
                     maxLength={20}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="eb-company">Company</Label>
+                  <Label htmlFor="eb-business">Business Name *</Label>
                   <Input
-                    id="eb-company"
-                    placeholder="Company name"
-                    value={formData.company}
-                    onChange={(e) => handleChange("company", e.target.value)}
+                    id="eb-business"
+                    placeholder="My Construction Co."
+                    value={formData.businessName}
+                    onChange={(e) => handleChange("businessName", e.target.value)}
+                    required
                     maxLength={100}
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="eb-reg">Registration Number</Label>
+                  <Input
+                    id="eb-reg"
+                    placeholder="2024/123456/07"
+                    value={formData.regNumber}
+                    onChange={(e) => handleChange("regNumber", e.target.value)}
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="eb-address">Billing Address</Label>
+                <Textarea
+                  id="eb-address"
+                  placeholder="123 Main Street, Sandton, 2196"
+                  value={formData.billingAddress}
+                  onChange={(e) => handleChange("billingAddress", e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="eb-heard">Where did you hear about us?</Label>
+                <Select value={formData.heardAbout} onValueChange={(v) => handleChange("heardAbout", v)}>
+                  <SelectTrigger id="eb-heard">
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {heardAboutOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2.5">
@@ -190,7 +240,7 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
             <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
             <h3 className="text-xl font-bold mb-2">You're In!</h3>
             <p className="text-muted-foreground max-w-sm">
-              Thank you for joining the Early Bird Promotion. Our team will be in touch shortly to get you set up.
+              Thank you for joining the Pre-Launch Promotion. Our team will be in touch shortly to get you set up.
             </p>
             <Button className="mt-6" onClick={() => handleClose(false)}>
               Close
