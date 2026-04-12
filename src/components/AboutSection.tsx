@@ -15,7 +15,7 @@ const highlights = [
 {
   icon: BarChart3,
   title: "Structured Professional Collaboration",
-  desc: "We support consultants and project professionals with clear workflows, documentation controls, and reporting systems that improve coordination and reduce execution risk."
+  desc: "We provide a digital collaborative platform that construction value chain stakeholders for efficient and high-quality development of projects across the various IDMS stages from project planning, design development, documentation, procurement, execution, handover and closeout."
 }];
 
 
