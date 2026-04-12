@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     const rand = Math.floor(Math.random() * 900 + 100);
     const invoiceNumber = `INV-${dateStr}-${rand}`;
 
-    // 4. Calculate amounts based on plan
+    // 4. Calculate amounts based on plan (no VAT — not VAT registered)
     let amount: number;
     let description: string;
     if (paymentPlan === "once-off") {
@@ -103,8 +103,8 @@ Deno.serve(async (req) => {
       description = "Pre-Launch Promotion — Monthly Instalment (1 of 12)";
     }
 
-    const taxAmount = amount * 0.15;
-    const totalAmount = amount + taxAmount;
+    const taxAmount = 0;
+    const totalAmount = amount;
 
     // 5. Create invoice
     const dueDate = new Date(now);
