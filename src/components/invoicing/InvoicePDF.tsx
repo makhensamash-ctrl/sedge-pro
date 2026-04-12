@@ -153,15 +153,17 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-          <View>
-            <Text style={styles.dateLabel}>Issue Date</Text>
-            <Text style={styles.dateValue}>{formatDate(invoice.issue_date)}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', gap: 20 }}>
+            <View>
+              <Text style={styles.dateLabel}>Issue Date</Text>
+              <Text style={styles.dateValue}>{formatDate(invoice.issue_date)}</Text>
+            </View>
             {invoice.due_date && (
-              <>
+              <View>
                 <Text style={styles.dateLabel}>Due On</Text>
                 <Text style={styles.dateValue}>{formatDate(invoice.due_date)}</Text>
-              </>
+              </View>
             )}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
