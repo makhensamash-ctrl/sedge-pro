@@ -225,16 +225,6 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
           </View>
         </View>
 
-        <View style={styles.notesSection}>
-          <View style={styles.notesHeader}>
-            <Text style={styles.notesTitle}>Notes</Text>
-          </View>
-          <View style={styles.notesContent}>
-            <Text style={styles.notesText}>
-              {invoice.notes || invoice.business_profile?.terms_and_conditions || 'Thank you for your business.'}
-            </Text>
-          </View>
-        </View>
 
         {(bankingDetails.bank_name || bankingDetails.account_number) && (
           <View style={styles.bankingSection}>
