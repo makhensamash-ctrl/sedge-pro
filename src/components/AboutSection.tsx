@@ -51,7 +51,7 @@ const AboutSection = () =>
       </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
         {highlights.map((h, i) => <motion.div key={h.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
       transition={{ duration: 0.5, delay: i * 0.15 }}
       className="bg-card rounded-xl p-8 shadow-sm border border-border hover:shadow-md transition-shadow text-center">
