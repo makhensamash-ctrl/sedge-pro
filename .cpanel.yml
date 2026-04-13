@@ -7,3 +7,7 @@ deployment:
     - cp public/.htaccess dist/.htaccess
   source: /
   destination: /
+  exclude:
+    - .git/
+    - node_modules/
+    - .env
