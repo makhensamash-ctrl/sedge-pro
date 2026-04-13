@@ -1,13 +1,6 @@
 ---
 deployment:
   tasks:
-    - export NODE_ENV=production
-    - npm install
-    - npm run build
-    - cp public/.htaccess dist/.htaccess
-  source: /
-  destination: /
-  exclude:
-    - .git/
-    - node_modules/
-    - .env
+    - export DEPLOYPATH=/home/sedgepro/public_html
+    - /bin/cp -R dist/* $DEPLOYPATH
+    - /bin/cp public/.htaccess /home/sedgepro/public_html/.htaccess
