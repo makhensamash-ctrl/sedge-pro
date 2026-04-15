@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, UserCircle, Phone, Mail, Globe, FileText, Package, Calendar, Sparkles } from "lucide-react";
 import LeadChecklist from "./LeadChecklist";
+import LeadActivityTimeline from "./LeadActivityTimeline";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { Lead } from "./LeadCard";
