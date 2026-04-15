@@ -6,12 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+    if (contentLength > 10000) {
+      return new Response(JSON.stringify({ error: "Payload too large" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const {
       clientName,
       email,
@@ -33,6 +43,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate email format
+    if (!EMAIL_REGEX.test(email.trim())) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate payment plan
+    if (paymentPlan && !["once-off", "monthly"].includes(paymentPlan)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid payment plan" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -50,7 +76,6 @@ Deno.serve(async (req) => {
 
     if (existingClient) {
       clientId = existingClient.id;
-      // Update client details
       await supabase.from("clients").update({
         name: clientName.trim(),
         phone: phone?.trim() || null,
@@ -67,14 +92,20 @@ Deno.serve(async (req) => {
           company: businessName?.trim() || null,
           address: billingAddress?.trim() || null,
           notes: [
-            regNumber ? `Reg: ${regNumber}` : null,
-            heardAbout ? `Source: ${heardAbout}` : null,
+            regNumber ? `Reg: ${String(regNumber).slice(0, 50)}` : null,
+            heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
           ].filter(Boolean).join("\n") || null,
         })
         .select("id")
         .single();
 
-      if (clientError) throw new Error(`Failed to create client: ${clientError.message}`);
+      if (clientError) {
+        console.error("Client creation failed:", clientError);
+        return new Response(
+          JSON.stringify({ error: "Failed to process client details" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       clientId = newClient.id;
     }
 
@@ -92,7 +123,7 @@ Deno.serve(async (req) => {
     const rand = Math.floor(Math.random() * 900 + 100);
     const invoiceNumber = `INV-${dateStr}-${rand}`;
 
-    // 4. Calculate amounts based on plan (no VAT — not VAT registered)
+    // 4. Calculate amounts based on plan (no VAT)
     let amount: number;
     let description: string;
     if (paymentPlan === "once-off") {
@@ -124,7 +155,7 @@ Deno.serve(async (req) => {
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
         description,
-        notes: `Payment plan: ${planLabel}\n${regNumber ? `Registration: ${regNumber}\n` : ""}${heardAbout ? `Source: ${heardAbout}` : ""}`.trim(),
+        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
         next_recurrence_date: paymentPlan === "monthly" 
@@ -134,7 +165,13 @@ Deno.serve(async (req) => {
       .select("id, invoice_number, total_amount")
       .single();
 
-    if (invoiceError) throw new Error(`Failed to create invoice: ${invoiceError.message}`);
+    if (invoiceError) {
+      console.error("Invoice creation failed:", invoiceError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create invoice" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 6. Create invoice line item
     await supabase.from("invoice_line_items").insert({
@@ -160,10 +197,6 @@ Deno.serve(async (req) => {
         invoiceNumber: invoice.invoice_number,
         paymentMethod: "EFT",
         paymentPlan,
-        businessName,
-        regNumber,
-        billingAddress,
-        heardAbout,
       },
     });
 
@@ -191,7 +224,7 @@ Deno.serve(async (req) => {
         email: email.trim(),
         phone: phone?.trim() || null,
         source: "Pre-Launch Promotion",
-        notes: `Payment: EFT\nPlan: ${planLabel} (${planPrice})\nBusiness: ${businessName}\n${regNumber ? `Reg: ${regNumber}\n` : ""}Invoice: ${invoiceNumber}`,
+        notes: `Payment: EFT\nPlan: ${String(planLabel || "").slice(0, 100)} (${String(planPrice || "").slice(0, 50)})\nBusiness: ${String(businessName).slice(0, 100)}\n${regNumber ? `Reg: ${String(regNumber).slice(0, 50)}\n` : ""}Invoice: ${invoiceNumber}`,
         stage_id: firstStage.id,
         position: nextPosition,
       });
@@ -214,11 +247,10 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err: unknown) {
-    console.error("EFT checkout error:", err);
-    const message = err instanceof Error ? err.message : "Something went wrong";
+  } catch (error: unknown) {
+    console.error("EFT checkout error:", error instanceof Error ? error.message : "Unknown error");
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
