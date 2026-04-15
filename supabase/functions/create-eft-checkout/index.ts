@@ -214,10 +214,11 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("EFT checkout error:", err);
+    const message = err instanceof Error ? err.message : "Something went wrong";
     return new Response(
-      JSON.stringify({ error: err.message || "Something went wrong" }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
