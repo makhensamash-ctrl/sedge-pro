@@ -6,16 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+    if (contentLength > 10000) {
+      return new Response(JSON.stringify({ error: "Payload too large" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { client_name, email, phone, source, notes } = await req.json();
 
     if (!client_name || typeof client_name !== "string" || client_name.trim().length === 0) {
       return new Response(JSON.stringify({ error: "client_name is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate email format if provided
+    if (email && typeof email === "string" && !EMAIL_REGEX.test(email.trim())) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -26,7 +44,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get the first pipeline stage (lowest position) as default
     const { data: firstStage, error: stageError } = await supabase
       .from("pipeline_stages")
       .select("id")
@@ -35,13 +52,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (stageError || !firstStage) {
-      return new Response(JSON.stringify({ error: "No pipeline stages configured" }), {
+      return new Response(JSON.stringify({ error: "Pipeline not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get max position in that stage
     const { data: maxPosData } = await supabase
       .from("leads")
       .select("position")
@@ -67,7 +83,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      return new Response(JSON.stringify({ error: insertError.message }), {
+      console.error("Lead insert error:", insertError);
+      return new Response(JSON.stringify({ error: "Failed to create lead" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -77,7 +94,8 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (error: unknown) {
+    console.error("Create lead error:", error);
     return new Response(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

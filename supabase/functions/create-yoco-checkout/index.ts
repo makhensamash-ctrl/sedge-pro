@@ -7,17 +7,47 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_BODY = 10000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+    if (contentLength > MAX_BODY) {
+      return new Response(JSON.stringify({ error: "Payload too large" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress } = await req.json();
+
+    // Validate required fields
+    if (!amount || typeof amount !== "number" || amount < 100 || amount > 100000000) {
+      return new Response(JSON.stringify({ error: "Invalid payment amount" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (customerEmail && typeof customerEmail === "string" && !EMAIL_REGEX.test(customerEmail.trim())) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const yocoKey = Deno.env.get("Yoco_Secret");
     if (!yocoKey) {
-      throw new Error("Yoco_Secret not configured");
+      console.error("Yoco_Secret not configured");
+      return new Response(JSON.stringify({ error: "Payment gateway not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseAdmin = createClient(
@@ -55,14 +85,20 @@ serve(async (req) => {
             company: businessName?.trim() || null,
             address: billingAddress?.trim() || null,
             notes: [
-              regNumber ? `Reg: ${regNumber}` : null,
-              heardAbout ? `Source: ${heardAbout}` : null,
+              regNumber ? `Reg: ${String(regNumber).slice(0, 50)}` : null,
+              heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
             ].filter(Boolean).join("\n") || null,
           })
           .select("id")
           .single();
 
-        if (clientError) throw new Error(`Failed to create client: ${clientError.message}`);
+        if (clientError) {
+          console.error("Client creation failed:", clientError);
+          return new Response(JSON.stringify({ error: "Failed to process client details" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         clientId = newClient.id;
       }
     } else {
@@ -77,7 +113,13 @@ serve(async (req) => {
         .select("id")
         .single();
 
-      if (clientError) throw new Error(`Failed to create client: ${clientError.message}`);
+      if (clientError) {
+        console.error("Client creation failed:", clientError);
+        return new Response(JSON.stringify({ error: "Failed to process client details" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       clientId = newClient.id;
     }
 
@@ -96,14 +138,12 @@ serve(async (req) => {
     const invoiceNumber = `INV-${dateStr}-${rand}`;
 
     // 4. Calculate amounts (no VAT)
-    const invoiceAmount = amount / 100; // Convert cents to rands
+    const invoiceAmount = amount / 100;
     const taxAmount = 0;
     const totalAmount = invoiceAmount;
+    const description = packageName ? String(packageName).slice(0, 200) : "Card Payment";
 
-    // Determine description from package name
-    const description = packageName || "Card Payment";
-
-    // 5. Create invoice (status: sent, will be updated by webhook)
+    // 5. Create invoice
     const dueDate = new Date(now);
     dueDate.setDate(dueDate.getDate() + 7);
 
@@ -123,14 +163,20 @@ serve(async (req) => {
         description,
         notes: [
           `Payment method: Card`,
-          regNumber ? `Registration: ${regNumber}` : null,
-          heardAbout ? `Source: ${heardAbout}` : null,
+          regNumber ? `Registration: ${String(regNumber).slice(0, 50)}` : null,
+          heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
         ].filter(Boolean).join("\n"),
       })
       .select("id, invoice_number")
       .single();
 
-    if (invoiceError) throw new Error(`Failed to create invoice: ${invoiceError.message}`);
+    if (invoiceError) {
+      console.error("Invoice creation failed:", invoiceError);
+      return new Response(JSON.stringify({ error: "Failed to create invoice" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // 6. Create invoice line item
     await supabaseAdmin.from("invoice_line_items").insert({
@@ -152,7 +198,7 @@ serve(async (req) => {
       successUrl: `${origin}/payment/success`,
       cancelUrl: `${origin}/payment/failed`,
       failureUrl: `${origin}/payment/failed`,
-      metadata: { packageName, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      metadata: { packageName: description, customerName, customerEmail: trimmedEmail, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
     };
 
     if (lineItems) {
@@ -172,33 +218,31 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error("Yoco error:", data);
-      // Clean up invoice if Yoco fails
       await supabaseAdmin.from("invoice_line_items").delete().eq("invoice_id", invoice.id);
       await supabaseAdmin.from("invoices").delete().eq("id", invoice.id);
-      return new Response(JSON.stringify({ error: data }), {
+      return new Response(JSON.stringify({ error: "Payment gateway error" }), {
         status: response.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 8. Store payment record with invoice reference
+    // 8. Store payment record
     await supabaseAdmin.from("payments").insert({
       checkout_id: data.id,
-      package_name: packageName,
+      package_name: description,
       amount_cents: amount,
       customer_email: trimmedEmail || null,
       client_name: customerName?.trim() || null,
       status: "created",
-      metadata: { customerName, customerPhone, heardAbout, businessName, regNumber, billingAddress, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      metadata: { customerName, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
     });
 
     return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    console.error("Checkout error:", error instanceof Error ? error.message : "Unknown error");
+    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
