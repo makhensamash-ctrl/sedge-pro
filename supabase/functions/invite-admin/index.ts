@@ -70,8 +70,8 @@ serve(async (req) => {
             user_metadata: { must_change_password: true },
           });
           updated++;
-        } catch (e) {
-          errors.push(`${role.user_id}: ${e.message}`);
+        } catch (e: unknown) {
+          errors.push(`${role.user_id}: ${e instanceof Error ? e.message : "Unknown error"}`);
         }
       }
 
@@ -125,8 +125,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, userId: targetUserId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
