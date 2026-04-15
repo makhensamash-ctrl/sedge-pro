@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Settings, Users, FileText, BarChart3, Bell, CheckCircle, TrendingUp } from "lucide-react";
+import { Settings, FileText, BarChart3, Bell, CheckCircle, TrendingUp } from "lucide-react";
 
 const steps = [
   {
@@ -53,7 +53,7 @@ const HowItWorks = () => (
           How It <span className="text-accent">Works</span>
         </h2>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Seven simple steps from project setup to decision making with no training required.
+          Six simple steps from project setup to decision making with no training required.
         </p>
       </motion.div>
 
