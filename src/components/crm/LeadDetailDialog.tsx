@@ -220,6 +220,11 @@ const LeadDetailDialog = ({ open, onOpenChange, lead, onToggleAssign, assignment
         {/* Stage Checklist */}
         <LeadChecklist leadId={lead.id} stageId={lead.stage_id} />
 
+        {/* Activity Timeline */}
+        <div className="pb-3 border-b border-border">
+          <LeadActivityTimeline leadId={lead.id} />
+        </div>
+
         {/* Assignment */}
         <div className="pb-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
