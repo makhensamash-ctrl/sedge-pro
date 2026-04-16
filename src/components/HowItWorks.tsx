@@ -1,46 +1,40 @@
 import { motion } from "framer-motion";
-import { Settings, Users, FileText, BarChart3, Bell, CheckCircle, TrendingUp } from "lucide-react";
+import { Settings, FileText, BarChart3, Bell, CheckCircle, TrendingUp } from "lucide-react";
 
 const steps = [
   {
     icon: Settings,
     num: "01",
-    title: "Project Setup",
-    desc: "We setup your project within 48 hours.",
-  },
-  {
-    icon: Users,
-    num: "02",
-    title: "Grant Access",
-    desc: "Grant relevant access for project stakeholders to transact.",
+    title: "Project Setup & Access",
+    desc: "We setup your project within 48 hours and grant relevant access for project stakeholders to transact.",
   },
   {
     icon: FileText,
-    num: "03",
+    num: "02",
     title: "Capture Data",
     desc: "Stakeholders create in-system documents, upload and capture regular project data.",
   },
   {
     icon: BarChart3,
-    num: "04",
+    num: "03",
     title: "Auto Reports",
     desc: "System analyses and autogenerate professional reports and files all records.",
   },
   {
     icon: Bell,
-    num: "05",
+    num: "04",
     title: "Performance Tracking",
     desc: "Users get customised performance reports and action trackers with notifications.",
   },
   {
     icon: CheckCircle,
-    num: "06",
+    num: "05",
     title: "Decide",
     desc: "Quality real-time evidence-based decisions are made.",
   },
   {
     icon: TrendingUp,
-    num: "07",
+    num: "06",
     title: "Continual Improvement",
     desc: "Stakeholders received customised continual improvement reports and industry insights.",
   },
@@ -59,7 +53,7 @@ const HowItWorks = () => (
           How It <span className="text-accent">Works</span>
         </h2>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Seven simple steps from project setup to decision making with no training required.
+          Six simple steps from project setup to decision making with no training required.
         </p>
       </motion.div>
 

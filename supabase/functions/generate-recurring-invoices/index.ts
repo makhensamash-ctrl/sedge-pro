@@ -10,6 +10,55 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate using CRON_SECRET or valid admin JWT
+  const authHeader = req.headers.get("Authorization");
+  const cronSecret = Deno.env.get("CRON_SECRET");
+
+  if (cronSecret) {
+    const token = authHeader?.replace("Bearer ", "");
+    if (token !== cronSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } else {
+    // Fallback: require a valid admin JWT if no CRON_SECRET
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const callerClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await callerClient.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Verify admin role
+    const supabaseCheck = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: role } = await supabaseCheck
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!role) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -18,7 +67,6 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    // Find recurring invoices due today or earlier
     const { data: dueInvoices, error: fetchError } = await supabase
       .from("invoices")
       .select("*, invoice_line_items(*)")
@@ -39,7 +87,6 @@ Deno.serve(async (req) => {
       const now = new Date();
       const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 
-      // Calculate next recurrence date
       const currentNext = new Date(invoice.next_recurrence_date);
       let nextDate: Date;
       if (invoice.recurrence_interval === "weekly") {
@@ -49,12 +96,10 @@ Deno.serve(async (req) => {
         nextDate = new Date(currentNext);
         nextDate.setFullYear(nextDate.getFullYear() + 1);
       } else {
-        // monthly
         nextDate = new Date(currentNext);
         nextDate.setMonth(nextDate.getMonth() + 1);
       }
 
-      // Create new invoice
       const { data: newInvoice, error: insertError } = await supabase
         .from("invoices")
         .insert({
@@ -81,7 +126,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Copy line items
       if (invoice.invoice_line_items && invoice.invoice_line_items.length > 0) {
         const lineItems = invoice.invoice_line_items.map((item: any) => ({
           invoice_id: newInvoice.id,
@@ -95,7 +139,6 @@ Deno.serve(async (req) => {
         await supabase.from("invoice_line_items").insert(lineItems);
       }
 
-      // Create payment record
       const { data: clientData } = await supabase
         .from("clients")
         .select("name, email")
@@ -111,7 +154,6 @@ Deno.serve(async (req) => {
         metadata: { invoice_id: newInvoice.id, source: "recurring_invoice" },
       });
 
-      // Update parent invoice's next_recurrence_date
       await supabase
         .from("invoices")
         .update({ next_recurrence_date: nextDate.toISOString().split("T")[0] })
@@ -124,9 +166,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ message: `Generated ${generated} recurring invoices`, generated }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating recurring invoices:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Failed to generate recurring invoices" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,13 +6,52 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, webhook-signature",
 };
 
-serve(async (req) => {
+async function verifyWebhookSignature(rawBody: string, signature: string | null, secret: string): Promise<boolean> {
+  if (!signature) return false;
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+    const expectedSig = Array.from(new Uint8Array(sig))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return signature === expectedSig;
+  } catch {
+    return false;
+  }
+}
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+
+    // Verify webhook signature if secret is configured
+    const webhookSecret = Deno.env.get("YOCO_WEBHOOK_SECRET");
+    if (webhookSecret) {
+      const signature = req.headers.get("webhook-signature");
+      const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
+      if (!isValid) {
+        console.error("Invalid webhook signature");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      console.warn("YOCO_WEBHOOK_SECRET not configured — signature verification skipped");
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("Yoco webhook received:", JSON.stringify(body));
 
     const eventType = body.type;
@@ -30,8 +68,8 @@ serve(async (req) => {
     const paymentId = payload.id;
     const status = payload.status;
 
-    if (!checkoutId) {
-      console.log("No checkoutId in webhook payload, skipping");
+    if (!checkoutId || typeof checkoutId !== "string") {
+      console.log("No valid checkoutId in webhook payload, skipping");
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -68,14 +106,12 @@ serve(async (req) => {
       const invoiceId = (payment.metadata as any)?.invoiceId;
       if (invoiceId) {
         if (newStatus === "completed") {
-          // Mark invoice as paid
           await supabaseAdmin
             .from("invoices")
             .update({ status: "paid", updated_at: new Date().toISOString() })
             .eq("id", invoiceId);
           console.log(`Invoice ${invoiceId} marked as paid`);
         } else if (newStatus === "failed") {
-          // Mark invoice as unconfirmed
           await supabaseAdmin
             .from("invoices")
             .update({ status: "unconfirmed", updated_at: new Date().toISOString() })
@@ -154,9 +190,9 @@ serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Webhook error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    console.error("Webhook error:", error instanceof Error ? error.message : "Unknown error");
+    return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
