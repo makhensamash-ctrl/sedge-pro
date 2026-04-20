@@ -113,7 +113,7 @@ const AprilPromotion = () => {
 
             <div className="w-full sm:w-56 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 p-5 text-center">
               <span className="block text-3xl md:text-4xl font-extrabold text-accent">R3,000<span className="text-lg font-semibold">/mo</span></span>
-              <span className="block text-sm text-primary-foreground/70 mt-1">12 Monthly Instalments</span>
+              
             </div>
           </div>
         </motion.div>
