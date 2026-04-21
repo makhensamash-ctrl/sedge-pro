@@ -5,12 +5,12 @@ const highlights = [
 {
   icon: ShieldCheck,
   title: "Contractor Performance & Profitability",
-  desc: "We equip contractors with structured systems and expert support to improve financial visibility, strengthen control, and build resilient businesses."
-},
-{
-  icon: Users,
-  title: "Oversight & Industry Performance",
-  desc: "We provide developers, associations, and regulators with digital infrastructure that strengthens oversight, enables sector monitoring, and maintains audit-ready project records, enhancing accountability and service delivery"
+    desc: "We provide contractors with a simple-to-use service that enables them to track and manage their site progress, productivity, profitability, cost reports and generate project estimates and payments all aimed at strengthening their project control systems and build resilient businesses."
+  },
+  {
+    icon: Users,
+    title: "Oversight & Industry Performance",
+    desc: "We provide a digital collaborative platform to clients, consultants and contractors for efficient and high-quality development of projects across the IDMS stages from project planning, design development, documentation, procurement, execution, handover and closeout."
 },
 {
   icon: BarChart3,

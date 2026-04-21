@@ -6,37 +6,37 @@ const steps = [
     icon: Settings,
     num: "01",
     title: "Project Setup & Access",
-    desc: "We setup your project within 48 hours and grant relevant access for project stakeholders to transact.",
+    desc: "We setup your project within 48 hours so your workload is offloaded promptly\n",
   },
   {
     icon: FileText,
     num: "02",
     title: "Capture Data",
-    desc: "Stakeholders create in-system documents, upload and capture regular project data.",
+    desc: "You upload or create in-system documents using our built-in templates\n",
   },
   {
     icon: BarChart3,
     num: "03",
     title: "Auto Reports",
-    desc: "System analyses and autogenerate professional reports and files all records.",
+    desc: "We generate all your project/business reports and file your records\n",
   },
   {
     icon: Bell,
     num: "04",
     title: "Performance Tracking",
-    desc: "Users get customised performance reports and action trackers with notifications.",
+    desc: "We provide you with a executive dashboard for decision making\n",
   },
   {
     icon: CheckCircle,
     num: "05",
     title: "Decide",
-    desc: "Quality real-time evidence-based decisions are made.",
+    desc: "You make the decisions, we provide professional advice\n",
   },
   {
     icon: TrendingUp,
     num: "06",
     title: "Continual Improvement",
-    desc: "Stakeholders received customised continual improvement reports and industry insights.",
+    desc: "We share lessons learnt and industry insights for improving your business and project performance.\n",
   },
 ];
 
@@ -53,7 +53,7 @@ const HowItWorks = () => (
           How It <span className="text-accent">Works</span>
         </h2>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Six simple steps from project setup to decision making with no training required.
+          We provide you with a service using our software and manage the entire process, so you focus on the business whilst we provide you with all the project data you need to make business and project decisions and for continual performance improvements.
         </p>
       </motion.div>
 
