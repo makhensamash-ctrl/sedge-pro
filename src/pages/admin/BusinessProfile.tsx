@@ -18,6 +18,7 @@ interface BusinessProfile {
   contact_phone: string | null;
   physical_address: string | null;
   website_address: string | null;
+  vat_number: string | null;
   bank_name: string | null;
   account_holder_name: string | null;
   account_number: string | null;
@@ -54,6 +55,7 @@ const BusinessProfile = () => {
     contact_phone: form.contact_phone ?? profile?.contact_phone ?? "",
     physical_address: form.physical_address ?? profile?.physical_address ?? "",
     website_address: form.website_address ?? profile?.website_address ?? "",
+    vat_number: form.vat_number ?? profile?.vat_number ?? "",
     bank_name: form.bank_name ?? profile?.bank_name ?? "",
     account_holder_name: form.account_holder_name ?? profile?.account_holder_name ?? "",
     account_number: form.account_number ?? profile?.account_number ?? "",
@@ -73,6 +75,7 @@ const BusinessProfile = () => {
         contact_phone: currentForm.contact_phone || null,
         physical_address: currentForm.physical_address || null,
         website_address: currentForm.website_address || null,
+        vat_number: currentForm.vat_number || null,
         bank_name: currentForm.bank_name || null,
         account_holder_name: currentForm.account_holder_name || null,
         account_number: currentForm.account_number || null,
@@ -196,6 +199,10 @@ const BusinessProfile = () => {
             <div className="space-y-2">
               <Label htmlFor="website_address">Website</Label>
               <Input id="website_address" value={currentForm.website_address || ""} onChange={(e) => update("website_address", e.target.value)} placeholder="https://example.com" disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vat_number">VAT Number</Label>
+              <Input id="vat_number" value={currentForm.vat_number || ""} onChange={(e) => update("vat_number", e.target.value)} placeholder="e.g., 4123456789" disabled={!canEdit} />
             </div>
           </div>
 
