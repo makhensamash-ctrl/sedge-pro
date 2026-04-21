@@ -56,7 +56,7 @@ const Invoices = () => {
   const [productPrefill, setProductPrefill] = useState<{ name: string; price: number } | null>(null);
   const [descriptionEditIndex, setDescriptionEditIndex] = useState<number | null>(null);
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
-  const [newClient, setNewClient] = useState({ name: '', company: '', email: '', phone: '' });
+  const [newClient, setNewClient] = useState({ name: '', company: '', email: '', phone: '', vat_number: '' });
   const [clients, setClients] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
@@ -78,7 +78,7 @@ const Invoices = () => {
   const { data: invoices = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-invoices'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('invoices').select(`*, clients(name, email, phone, address, company), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('invoices').select(`*, clients(name, email, phone, address, company, vat_number), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, vat_number, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
       if (error) throw error;
       return data as Invoice[];
     }
@@ -144,11 +144,11 @@ const Invoices = () => {
   const addClient = async () => {
     if (!newClient.name.trim()) { toast.error('Client name is required'); return; }
     try {
-      const { data, error } = await supabase.from('clients').insert({ name: newClient.name.trim(), company: newClient.company.trim() || null, email: newClient.email.trim() || null, phone: newClient.phone.trim() || null }).select().single();
+      const { data, error } = await supabase.from('clients').insert({ name: newClient.name.trim(), company: newClient.company.trim() || null, email: newClient.email.trim() || null, phone: newClient.phone.trim() || null, vat_number: newClient.vat_number.trim() || null }).select().single();
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
       setNewInvoice(prev => ({ ...prev, client_id: data.id }));
-      setNewClient({ name: '', company: '', email: '', phone: '' });
+      setNewClient({ name: '', company: '', email: '', phone: '', vat_number: '' });
       setIsAddClientOpen(false);
       toast.success('Client created');
     } catch (error) { toast.error('Failed to create client'); }
@@ -671,6 +671,7 @@ const Invoices = () => {
             <div><Label>Company</Label><Input value={newClient.company} onChange={(e) => setNewClient({...newClient, company: e.target.value})} placeholder="Company" /></div>
             <div><Label>Email</Label><Input type="email" value={newClient.email} onChange={(e) => setNewClient({...newClient, email: e.target.value})} placeholder="Email" /></div>
             <div><Label>Phone</Label><Input value={newClient.phone} onChange={(e) => setNewClient({...newClient, phone: e.target.value})} placeholder="Phone" /></div>
+            <div><Label>VAT Number</Label><Input value={newClient.vat_number} onChange={(e) => setNewClient({...newClient, vat_number: e.target.value})} placeholder="VAT number" /></div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsAddClientOpen(false)}>Cancel</Button>
