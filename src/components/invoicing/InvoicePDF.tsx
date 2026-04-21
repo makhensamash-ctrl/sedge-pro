@@ -30,6 +30,7 @@ interface InvoicePDFProps {
       phone?: string;
       address?: string;
       company?: string;
+      vat_number?: string;
     };
     business_profile?: {
       business_name: string;
@@ -37,6 +38,7 @@ interface InvoicePDFProps {
       contact_phone?: string;
       website_address?: string;
       physical_address?: string;
+      vat_number?: string;
       bank_name?: string;
       account_holder_name?: string;
       account_number?: string;
@@ -125,14 +127,11 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
             <Text style={styles.businessName}>
               {invoice.business_profile?.business_name || 'Your Business Name'}
             </Text>
-            {invoice.business_profile?.contact_phone && (
-              <Text style={styles.businessDetails}>{invoice.business_profile.contact_phone}</Text>
-            )}
             {invoice.business_profile?.physical_address && (
               <Text style={styles.businessDetails}>{invoice.business_profile.physical_address}</Text>
             )}
-            {invoice.business_profile?.website_address && (
-              <Text style={styles.businessDetails}>{invoice.business_profile.website_address}</Text>
+            {invoice.business_profile?.vat_number && (
+              <Text style={styles.businessDetails}>VAT No: {invoice.business_profile.vat_number}</Text>
             )}
           </View>
 
@@ -149,6 +148,9 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
             )}
             {invoice.client?.address && (
               <Text style={styles.businessDetails}>{invoice.client.address}</Text>
+            )}
+            {invoice.client?.vat_number && (
+              <Text style={styles.businessDetails}>VAT No: {invoice.client.vat_number}</Text>
             )}
           </View>
         </View>

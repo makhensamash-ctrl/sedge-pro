@@ -30,6 +30,7 @@ interface QuotationPDFProps {
       phone?: string;
       address?: string;
       company?: string;
+      vat_number?: string;
     };
     business_profile?: {
       business_name: string;
@@ -37,6 +38,7 @@ interface QuotationPDFProps {
       contact_phone?: string;
       website_address?: string;
       physical_address?: string;
+      vat_number?: string;
       bank_name?: string;
       account_holder_name?: string;
       account_number?: string;
@@ -97,14 +99,11 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation, items = [
             <Text style={styles.businessName}>
               {quotation.business_profile?.business_name || 'Your Business Name'}
             </Text>
-            {quotation.business_profile?.contact_phone && (
-              <Text style={styles.businessDetails}>{quotation.business_profile.contact_phone}</Text>
-            )}
             {quotation.business_profile?.physical_address && (
               <Text style={styles.businessDetails}>{quotation.business_profile.physical_address}</Text>
             )}
-            {quotation.business_profile?.website_address && (
-              <Text style={styles.businessDetails}>{quotation.business_profile.website_address}</Text>
+            {quotation.business_profile?.vat_number && (
+              <Text style={styles.businessDetails}>VAT No: {quotation.business_profile.vat_number}</Text>
             )}
           </View>
 
@@ -138,6 +137,9 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation, items = [
               )}
               {quotation.client?.phone && (
                 <Text style={styles.clientDetails}>{quotation.client.phone}</Text>
+              )}
+              {quotation.client?.vat_number && (
+                <Text style={styles.clientDetails}>VAT No: {quotation.client.vat_number}</Text>
               )}
             </View>
             <View style={styles.billToRight}>
