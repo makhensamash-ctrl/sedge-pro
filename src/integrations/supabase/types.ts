@@ -50,6 +50,7 @@ export type Database = {
           physical_address: string | null
           terms_and_conditions: string | null
           updated_at: string
+          vat_number: string | null
           website_address: string | null
         }
         Insert: {
@@ -66,6 +67,7 @@ export type Database = {
           physical_address?: string | null
           terms_and_conditions?: string | null
           updated_at?: string
+          vat_number?: string | null
           website_address?: string | null
         }
         Update: {
@@ -82,6 +84,7 @@ export type Database = {
           physical_address?: string | null
           terms_and_conditions?: string | null
           updated_at?: string
+          vat_number?: string | null
           website_address?: string | null
         }
         Relationships: []
@@ -98,6 +101,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           updated_at: string
+          vat_number: string | null
         }
         Insert: {
           address?: string | null
@@ -110,6 +114,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           updated_at?: string
+          vat_number?: string | null
         }
         Update: {
           address?: string | null
@@ -122,6 +127,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           updated_at?: string
+          vat_number?: string | null
         }
         Relationships: [
           {
