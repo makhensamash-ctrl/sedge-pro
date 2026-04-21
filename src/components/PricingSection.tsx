@@ -118,7 +118,7 @@ const PricingSection = () => {
             Project Performance System <span className="text-accent">Modules</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            A comprehensive set of modules designed to support planning, procurement, delivery, and performance across your projects.
+            Eight service areas designed to support planning, procurement, delivery, monitoring and performance for contractors, consultants and clients across their entire projects portfolio. Each service has built-in digital tools designed for ease of use by ordinary people with limited experience background.
           </p>
         </motion.div>
 
