@@ -72,8 +72,9 @@ serve(async (req) => {
       const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
       if (error) {
         console.error("Password update failed:", error);
-        return new Response(JSON.stringify({ error: "Failed to update password" }), {
-          status: 500,
+        // Surface the real reason (e.g. leaked password / weak password / length)
+        return new Response(JSON.stringify({ error: error.message || "Failed to update password" }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
