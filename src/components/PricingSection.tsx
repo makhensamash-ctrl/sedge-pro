@@ -115,7 +115,7 @@ const PricingSection = () => {
           className="text-center mb-14"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
-            Project Performance System <span className="text-accent">Modules</span>
+            Project Performance <span className="text-accent">System</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Eight service areas designed to support planning, procurement, delivery, monitoring and performance for contractors, consultants and clients across their entire projects portfolio. Each service has built-in digital tools designed for ease of use by ordinary people with limited experience background.
