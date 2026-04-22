@@ -97,10 +97,8 @@ const AprilPromotion = () => {
             <span className="text-accent">Limited Time Only</span>
           </h2>
 
-          <p className="text-primary-foreground/80 text-base md:text-lg mb-2 leading-relaxed">
-            We've officially launched our system, and for a limited time, you
-            can access our complete platform and expert support services for a
-            fraction of the cost through our exclusive pre-launch offer.
+          <p className="text-primary-foreground/80 text-base md:text-lg mb-2 leading-relaxed whitespace-pre-line">
+            {promo.intro}
           </p>
 
           <div className="text-center mb-2">
