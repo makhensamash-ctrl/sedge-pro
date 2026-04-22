@@ -35,20 +35,24 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.text();
 
-    // Verify webhook signature if secret is configured
+    // MANDATORY signature verification — fail closed if secret missing
     const webhookSecret = Deno.env.get("YOCO_WEBHOOK_SECRET");
-    if (webhookSecret) {
-      const signature = req.headers.get("webhook-signature");
-      const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
-      if (!isValid) {
-        console.error("Invalid webhook signature");
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      console.warn("YOCO_WEBHOOK_SECRET not configured — signature verification skipped");
+    if (!webhookSecret) {
+      console.error("YOCO_WEBHOOK_SECRET is not configured — refusing to process webhook");
+      return new Response(JSON.stringify({ error: "Server misconfiguration" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const signature = req.headers.get("webhook-signature");
+    const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
+    if (!isValid) {
+      console.error("Invalid webhook signature");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = JSON.parse(rawBody);

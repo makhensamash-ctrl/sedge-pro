@@ -202,7 +202,20 @@ serve(async (req) => {
     };
 
     if (lineItems) {
-      body.lineItems = lineItems;
+      if (!Array.isArray(lineItems) || lineItems.length === 0 || lineItems.length > 20) {
+        return new Response(JSON.stringify({ error: "Invalid lineItems" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      body.lineItems = lineItems.map((item: any) => ({
+        displayName: String(item?.displayName ?? "Item").slice(0, 200),
+        quantity: Math.max(1, Math.min(Number(item?.quantity) || 1, 999)),
+        pricingDetails: {
+          price: Math.max(0, Math.min(Number(item?.pricingDetails?.price) || 0, 100000000)),
+          currency: "ZAR",
+        },
+      }));
     }
 
     const response = await fetch("https://payments.yoco.com/api/checkouts", {
