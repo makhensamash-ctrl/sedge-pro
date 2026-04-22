@@ -37,7 +37,13 @@ const HeroSection = () =>
             href="#contact"
             className="border-2 border-primary-foreground/60 text-primary-foreground px-7 py-3 rounded-full font-semibold hover:bg-primary-foreground/10 transition-colors">
 
-              Watch Demo
+              Watch Project Performance video
+            </a>
+            <a
+            href="#contact"
+            className="border-2 border-primary-foreground/60 text-primary-foreground px-7 py-3 rounded-full font-semibold hover:bg-primary-foreground/10 transition-colors">
+
+              Watch Business Performance demo
             </a>
             <a
             href="#prelaunch-promotion"
