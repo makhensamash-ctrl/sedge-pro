@@ -4,6 +4,7 @@ import { Send, Mail, Phone, MapPin, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteSetting } from "@/hooks/useSiteContent";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -14,6 +15,14 @@ const contactSchema = z.object({
 
 const ContactSection = () => {
   const { toast } = useToast();
+  const { value: content } = useSiteSetting("contact", {
+    heading_prefix: "Need More",
+    heading_accent: "Information?",
+    intro: "Get in touch and our team will respond within 24 hours.",
+    email: "info@sedgepro.co.za",
+    phone: "065 075 3731",
+    address: "Johannesburg, South Africa",
+  });
   const [form, setForm] = useState({ name: "", company: "", email: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -63,10 +72,10 @@ const ContactSection = () => {
           className="text-center mb-14"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
-            Need More <span className="text-accent">Information?</span>
+            {content.heading_prefix} <span className="text-accent">{content.heading_accent}</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Get in touch and our team will respond within 24 hours.
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto whitespace-pre-line">
+            {content.intro}
           </p>
         </motion.div>
 
@@ -84,7 +93,7 @@ const ContactSection = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-primary">Email Us</h4>
-                <p className="text-muted-foreground text-sm">info@sedgepro.co.za</p>
+                <p className="text-muted-foreground text-sm">{content.email}</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -93,7 +102,7 @@ const ContactSection = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-primary">Call Us</h4>
-                <p className="text-muted-foreground text-sm">065 075 3731</p>
+                <p className="text-muted-foreground text-sm">{content.phone}</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -102,7 +111,7 @@ const ContactSection = () => {
               </div>
               <div>
                 <h4 className="font-semibold text-primary">Location</h4>
-                <p className="text-muted-foreground text-sm">Johannesburg, South Africa</p>
+                <p className="text-muted-foreground text-sm">{content.address}</p>
               </div>
             </div>
           </motion.div>
