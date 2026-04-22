@@ -27,7 +27,7 @@ const HowItWorks = () => {
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {cards.map((step, i) => {
             const Icon = getIcon(step.icon);
             const num = String(i + 1).padStart(2, "0");
