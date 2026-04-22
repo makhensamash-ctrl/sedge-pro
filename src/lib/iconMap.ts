@@ -1,0 +1,50 @@
+import {
+  ShieldCheck,
+  Users,
+  BarChart3,
+  GraduationCap,
+  Settings,
+  FileText,
+  Bell,
+  CheckCircle,
+  TrendingUp,
+  Sparkles,
+  Star,
+  Briefcase,
+  Target,
+  Award,
+  Zap,
+  Heart,
+  Globe,
+  Building,
+  Wrench,
+  ClipboardList,
+  type LucideIcon,
+} from "lucide-react";
+
+export const ICON_MAP: Record<string, LucideIcon> = {
+  ShieldCheck,
+  Users,
+  BarChart3,
+  GraduationCap,
+  Settings,
+  FileText,
+  Bell,
+  CheckCircle,
+  TrendingUp,
+  Sparkles,
+  Star,
+  Briefcase,
+  Target,
+  Award,
+  Zap,
+  Heart,
+  Globe,
+  Building,
+  Wrench,
+  ClipboardList,
+};
+
+export const ICON_NAMES = Object.keys(ICON_MAP);
+
+export const getIcon = (name: string): LucideIcon => ICON_MAP[name] ?? Sparkles;
