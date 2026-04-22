@@ -349,6 +349,7 @@ const ContentManager = () => {
             fields={[
               { key: "deadline", label: "Countdown deadline (YYYY-MM-DDTHH:MM:SS)" },
               { key: "valid_until_label", label: "Valid until label" },
+              { key: "intro", label: "Intro paragraph", type: "textarea" },
               { key: "original", label: "Original price (e.g. R100,000)" },
               { key: "once_off", label: "Once-off price (e.g. R20,000)" },
               { key: "monthly", label: "Monthly price (e.g. R3,000)" },
