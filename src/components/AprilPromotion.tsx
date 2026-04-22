@@ -1,10 +1,9 @@
 import { motion } from "framer-motion";
 import { Check, Clock, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import EarlyBirdDialog from "@/components/EarlyBirdDialog";
-
-const DEADLINE = new Date("2026-04-30T23:59:59").getTime();
+import { useSiteSetting } from "@/hooks/useSiteContent";
 
 const features = [
   "Ongoing remote expert support",
@@ -16,12 +15,21 @@ const features = [
 ];
 
 const AprilPromotion = () => {
-  const [timeLeft, setTimeLeft] = useState(DEADLINE - Date.now());
+  const { value: promo } = useSiteSetting("prelaunch", {
+    deadline: "2026-04-30T23:59:59",
+    once_off: "R20,000",
+    monthly: "R3,000",
+    original: "R100,000",
+    valid_until_label: "Offer valid until 30 April 2026",
+  });
+  const deadline = useMemo(() => new Date(promo.deadline).getTime(), [promo.deadline]);
+  const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
+    setTimeLeft(deadline - Date.now());
     const timer = setInterval(() => {
-      const remaining = DEADLINE - Date.now();
+      const remaining = deadline - Date.now();
       if (remaining <= 0) {
         setTimeLeft(0);
         clearInterval(timer);
@@ -30,7 +38,7 @@ const AprilPromotion = () => {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [deadline]);
 
   if (timeLeft <= 0) return null;
 
@@ -96,7 +104,7 @@ const AprilPromotion = () => {
 
           <div className="text-center mb-2">
             <span className="text-2xl md:text-3xl line-through text-primary-foreground/40 font-semibold">
-              R100,000
+              {promo.original}
             </span>
           </div>
 
@@ -105,14 +113,14 @@ const AprilPromotion = () => {
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-[10px] font-bold px-3 py-0.5 rounded-full">
                 Best value
               </span>
-              <span className="block text-3xl md:text-4xl font-extrabold text-accent">R20,000</span>
+              <span className="block text-3xl md:text-4xl font-extrabold text-accent">{promo.once_off}</span>
               <span className="block text-sm text-primary-foreground/70 mt-1">Once-off Payment</span>
             </div>
 
             <span className="text-primary-foreground/40 font-semibold text-sm">OR</span>
 
             <div className="w-full sm:w-56 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 p-5 text-center">
-              <span className="block text-3xl md:text-4xl font-extrabold text-accent">R3,000<span className="text-lg font-semibold">/mo</span></span>
+              <span className="block text-3xl md:text-4xl font-extrabold text-accent">{promo.monthly}<span className="text-lg font-semibold">/mo</span></span>
               
             </div>
           </div>
@@ -141,7 +149,7 @@ const AprilPromotion = () => {
         </motion.div>
 
         <p className="text-center text-primary-foreground/50 text-sm mb-10">
-          Offer valid until 30 April 2026
+          {promo.valid_until_label}
         </p>
 
         {/* Features */}

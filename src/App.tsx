@@ -17,6 +17,7 @@ import Packages from "./pages/admin/Packages";
 import Invoices from "./pages/admin/Invoices";
 import Quotations from "./pages/admin/Quotations";
 import BusinessProfilePage from "./pages/admin/BusinessProfile";
+import ContentManager from "./pages/admin/ContentManager";
 import PopiaPolicy from "./pages/PopiaPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="invoices" element={<Invoices />} />
             <Route path="quotations" element={<Quotations />} />
             <Route path="business-profile" element={<BusinessProfilePage />} />
+            <Route path="content" element={<ContentManager />} />
           </Route>
           <Route path="/popia-policy" element={<PopiaPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />

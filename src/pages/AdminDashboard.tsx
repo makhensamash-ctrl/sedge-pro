@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLeadNotifications } from "@/hooks/useLeadNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt, Building2, Menu } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt, Building2, Menu, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
@@ -19,6 +19,7 @@ const navItems = [
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
   { label: "Packages", icon: Package, path: "/admin/packages" },
+  { label: "Site Content", icon: FileEdit, path: "/admin/content" },
   { label: "Business Profile", icon: Building2, path: "/admin/business-profile" },
 ];
 
