@@ -21,6 +21,7 @@ const AprilPromotion = () => {
     monthly: "R3,000",
     original: "R100,000",
     valid_until_label: "Offer valid until 30 April 2026",
+    intro: "We've officially launched our system, and for a limited time, you can access our complete platform and expert support services for a fraction of the cost through our exclusive pre-launch offer.",
   });
   const deadline = useMemo(() => new Date(promo.deadline).getTime(), [promo.deadline]);
   const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
