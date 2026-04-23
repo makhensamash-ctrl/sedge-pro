@@ -1,0 +1,51 @@
+# Docker Compose — local dev stack for SEDGE Pro
+#
+# Spins up Postgres (Supabase-compatible) for running the schema locally.
+# For full Auth/Storage/Edge Functions parity, use Supabase CLI instead:
+#     npm i -g supabase && supabase start
+#
+# This file is the lightweight option: Postgres only, schema auto-applied.
+#
+# Usage:
+#   1. cp .env.example .env.local  (fill in values)
+#   2. docker compose up -d
+#   3. psql postgres://postgres:postgres@localhost:54322/postgres < migration/schema.sql
+#   4. (optional) supabase functions serve --env-file .env.local
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sedge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54322:5432"
+    volumes:
+      - sedge_pgdata:/var/lib/postgresql/data
+      - ./migration/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional: pgAdmin for visual DB browsing
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sedge-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  sedge_pgdata:
