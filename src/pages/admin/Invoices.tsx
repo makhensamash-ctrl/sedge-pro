@@ -65,6 +65,10 @@ const Invoices = () => {
   const [businessProfiles, setBusinessProfiles] = useState<any[]>([]);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [viewLineItems, setViewLineItems] = useState<any[]>([]);
+  const [sendingInvoice, setSendingInvoice] = useState<Invoice | null>(null);
+  const [sendRecipient, setSendRecipient] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [showEmailHistory, setShowEmailHistory] = useState(false);
 
   const generateInvoiceNumber = () => {
     const now = new Date();
