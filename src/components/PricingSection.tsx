@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSiteSetting } from "@/hooks/useSiteContent";
 import {
   Dialog,
   DialogContent,
@@ -115,10 +116,10 @@ const PricingSection = () => {
           className="text-center mb-14"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
-            Project Performance <span className="text-accent">System</span>
+            {pricing.heading_prefix} <span className="text-accent">{pricing.heading_accent}</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Eight service areas designed to support planning, procurement, delivery, monitoring and performance for contractors, consultants and clients across their entire projects portfolio. Each service has built-in digital tools designed for ease of use by ordinary people with limited experience background.
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto whitespace-pre-line">
+            {pricing.intro}
           </p>
         </motion.div>
 
