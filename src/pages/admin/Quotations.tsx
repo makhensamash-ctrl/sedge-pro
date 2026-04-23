@@ -573,6 +573,39 @@ const Quotations = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Quotation Dialog */}
+      <AlertDialog open={!!sendingQuotation} onOpenChange={(o) => !o && setSendingQuotation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send quotation {sendingQuotation?.quotation_number}</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will receive a branded email with the quotation PDF attached. Status will move to "Sent" automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Recipient email</Label>
+              <Input
+                type="email"
+                value={sendRecipient}
+                onChange={(e) => setSendRecipient(e.target.value)}
+                placeholder="client@example.com"
+                disabled={isSending}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              From: <span className="font-mono">SEDGE Pro &lt;onboarding@resend.dev&gt;</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendQuotation} disabled={isSending}>
+              {isSending ? "Sending..." : "Send email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
