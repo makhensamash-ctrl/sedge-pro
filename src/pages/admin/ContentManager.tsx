@@ -293,14 +293,31 @@ const ContentManager = () => {
         <p className="text-sm text-muted-foreground">Edit text and cards shown on the public landing page.</p>
       </div>
 
-      <Tabs defaultValue="about">
+      <Tabs defaultValue="hero">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="how">How It Works</TabsTrigger>
           <TabsTrigger value="prelaunch">Pre-launch</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="videos">Videos</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="hero" className="mt-4">
+          <SectionForm
+            title="Hero Section (Project Performance System)"
+            fields={[
+              { key: "title_prefix", label: "Title prefix" },
+              { key: "title_accent", label: "Title accent (highlighted text)" },
+              { key: "subtitle", label: "Subtitle / description", type: "textarea" },
+              { key: "cta_label", label: "CTA button label" },
+            ]}
+            values={drafts.hero ?? {}}
+            onChange={(k, v) => updateDraft("hero", k, v)}
+            onSave={() => saveSection("hero")}
+            saving={saving === "hero"}
+          />
+        </TabsContent>
 
         <TabsContent value="about" className="space-y-6 mt-4">
           <SectionForm
@@ -348,6 +365,9 @@ const ContentManager = () => {
           <SectionForm
             title="Pre-launch Promotion"
             fields={[
+              { key: "badge", label: "Top badge label (e.g. Pre-Launch Special Offer)" },
+              { key: "heading_prefix", label: "Heading prefix (e.g. Exclusive Pre-Launch Pricing,)" },
+              { key: "heading_accent", label: "Heading accent (e.g. Limited Time Only)" },
               { key: "deadline", label: "Countdown deadline (YYYY-MM-DDTHH:MM:SS)" },
               { key: "valid_until_label", label: "Valid until label" },
               { key: "intro", label: "Intro paragraph", type: "textarea" },
