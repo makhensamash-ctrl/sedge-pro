@@ -766,6 +766,93 @@ const Invoices = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Invoice Dialog */}
+      <AlertDialog open={!!sendingInvoice} onOpenChange={(o) => !o && setSendingInvoice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send invoice {sendingInvoice?.invoice_number}</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will receive a branded email with the invoice PDF attached. Status will move to "Sent" automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Recipient email</Label>
+              <Input
+                type="email"
+                value={sendRecipient}
+                onChange={(e) => setSendRecipient(e.target.value)}
+                placeholder="client@example.com"
+                disabled={isSending}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              From: <span className="font-mono">SEDGE Pro &lt;onboarding@resend.dev&gt;</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendInvoice} disabled={isSending}>
+              {isSending ? "Sending..." : "Send email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Email History */}
+      <Card>
+        <CardContent className="p-0">
+          <button
+            type="button"
+            onClick={() => setShowEmailHistory((v) => !v)}
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-foreground">Email history</span>
+              <Badge variant="outline">{emailLog.length}</Badge>
+            </div>
+            {showEmailHistory ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {showEmailHistory && (
+            <div className="border-t">
+              {emailLog.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">No emails sent yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {emailLog.map((log: any) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-xs">{new Date(log.created_at).toLocaleString()}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{log.email_type}</Badge></TableCell>
+                        <TableCell className="text-sm">{log.recipient}</TableCell>
+                        <TableCell className="text-sm max-w-[280px] truncate" title={log.subject}>{log.subject}</TableCell>
+                        <TableCell>
+                          {log.status === "sent" ? (
+                            <Badge className="bg-accent text-accent-foreground">Sent</Badge>
+                          ) : (
+                            <Badge variant="destructive" title={log.error_message || ""}>Failed</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
