@@ -264,6 +264,61 @@ const Quotations = () => {
     setViewLineItems(lineItems || []);
   };
 
+  const openSendDialog = (q: Quotation) => {
+    setSendingQuotation(q);
+    setSendRecipient(q.clients?.email || "");
+  };
+
+  const handleSendQuotation = async () => {
+    if (!sendingQuotation) return;
+    if (!sendRecipient.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sendRecipient.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsSending(true);
+    try {
+      const { data: lineItems } = await supabase.from('quotation_line_items').select('*').eq('quotation_id', sendingQuotation.id).order('sort_order');
+      const items = (lineItems || []).map((li: any) => ({
+        name: li.product_name,
+        description: li.description,
+        quantity: Number(li.quantity),
+        price: Number(li.unit_price),
+        total: Number(li.total_price),
+      }));
+
+      let pdfBase64: string | undefined;
+      try {
+        const blob = await pdf(
+          <QuotationPDF
+            quotation={{ ...sendingQuotation, client: sendingQuotation.clients || undefined, business_profile: sendingQuotation.business_profiles || undefined }}
+            items={items as any}
+          />
+        ).toBlob();
+        const buf = await blob.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        pdfBase64 = btoa(binary);
+      } catch (e) {
+        console.error("PDF generation failed, sending without attachment:", e);
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-quotation-email", {
+        body: { quotationId: sendingQuotation.id, recipient: sendRecipient.trim(), pdfBase64 },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Quotation emailed to ${sendRecipient.trim()}`);
+      setSendingQuotation(null);
+      refetch();
+    } catch (e: any) {
+      toast.error(`Failed to send: ${e?.message || "Unknown error"}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const totalAmount = filteredQuotations.reduce((sum, q) => sum + Number(q.total_amount), 0);
   const acceptedAmount = filteredQuotations.filter(q => q.status === 'accepted').reduce((sum, q) => sum + Number(q.total_amount), 0);
 
