@@ -12,13 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter } from "lucide-react";
-import { PDFDownloadLink } from "@react-pdf/renderer";
+import { FileText, Plus, Search, Download, Eye, Filter, Send } from "lucide-react";
+import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { QuotationPDF } from "@/components/invoicing/QuotationPDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
 import { ProductLineItems } from "@/components/invoicing/ProductLineItems";
 import { ClientSearchSelect } from "@/components/invoicing/ClientSearchSelect";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Quotation {
   id: string;
@@ -58,6 +59,9 @@ const Quotations = () => {
   const [businessProfiles, setBusinessProfiles] = useState<any[]>([]);
   const [viewingQuotation, setViewingQuotation] = useState<Quotation | null>(null);
   const [viewLineItems, setViewLineItems] = useState<any[]>([]);
+  const [sendingQuotation, setSendingQuotation] = useState<Quotation | null>(null);
+  const [sendRecipient, setSendRecipient] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const generateQuotationNumber = () => {
     const now = new Date();
