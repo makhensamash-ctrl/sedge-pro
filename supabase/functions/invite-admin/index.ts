@@ -169,6 +169,29 @@ serve(async (req) => {
       }
     }
 
+    // Send branded welcome email (only for newly created users — existing users keep their password)
+    if (!existingUser) {
+      try {
+        const origin = req.headers.get("origin") || "https://sedge-pro.lovable.app";
+        await fetch(`${supabaseUrl}/functions/v1/send-admin-invite-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            recipient: email.trim(),
+            fullName: fullName || "",
+            tempPassword: defaultPassword,
+            loginUrl: `${origin}/admin`,
+            userId: targetUserId,
+          }),
+        });
+      } catch (e) {
+        console.error("Failed to send admin invite email:", e);
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, userId: targetUserId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
