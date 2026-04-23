@@ -390,7 +390,16 @@ const Quotations = () => {
                 <TableCell className="text-sm">{q.expiry_date ? new Date(q.expiry_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => viewQuotationDetails(q)}><Eye className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => viewQuotationDetails(q)} title="View"><Eye className="w-3 h-3" /></Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSendDialog(q)}
+                      title="Send via email"
+                      disabled={!q.business_profiles}
+                    >
+                      <Send className="w-3 h-3" />
+                    </Button>
                     {!q.converted_to_invoice ? (
                       <Button variant="ghost" size="sm" onClick={() => convertToInvoice(q)} title="Convert to Invoice"><FileText className="w-3 h-3" /></Button>
                     ) : (
@@ -402,7 +411,7 @@ const Quotations = () => {
                         fileName={`quotation-${q.quotation_number}.pdf`}
                       >
                         {({ loading }) => (
-                          <Button variant="ghost" size="sm" disabled={loading}><Download className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="sm" disabled={loading} title="Download PDF"><Download className="w-3 h-3" /></Button>
                         )}
                       </PDFDownloadLink>
                     )}
