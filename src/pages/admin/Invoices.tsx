@@ -537,14 +537,23 @@ const Invoices = () => {
                 <TableCell className="text-sm">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => viewInvoiceDetails(inv)}><Eye className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => viewInvoiceDetails(inv)} title="View"><Eye className="w-3 h-3" /></Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSendDialog(inv)}
+                      title="Send via email"
+                      disabled={!inv.business_profiles}
+                    >
+                      <Send className="w-3 h-3" />
+                    </Button>
                     {inv.business_profiles && (
                       <PDFDownloadLink
                         document={<InvoicePDF invoice={{ ...inv, client: inv.clients || undefined, business_profile: inv.business_profiles || undefined }} items={[]} />}
                         fileName={`invoice-${inv.invoice_number}.pdf`}
                       >
                         {({ loading }) => (
-                          <Button variant="ghost" size="sm" disabled={loading}><Download className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="sm" disabled={loading} title="Download PDF"><Download className="w-3 h-3" /></Button>
                         )}
                       </PDFDownloadLink>
                     )}
