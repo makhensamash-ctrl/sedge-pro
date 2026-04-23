@@ -299,6 +299,7 @@ const ContentManager = () => {
           <TabsTrigger value="how">How It Works</TabsTrigger>
           <TabsTrigger value="prelaunch">Pre-launch</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="videos">Videos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="about" className="space-y-6 mt-4">
@@ -377,6 +378,26 @@ const ContentManager = () => {
             onSave={() => saveSection("contact")}
             saving={saving === "contact"}
           />
+        </TabsContent>
+
+        <TabsContent value="videos" className="mt-4">
+          <SectionForm
+            title="Hero Watch Videos (YouTube)"
+            fields={[
+              { key: "project_video_label", label: "Project video button label" },
+              { key: "project_video_id", label: "Project video YouTube ID (e.g. dQw4w9WgXcQ)" },
+              { key: "business_video_label", label: "Business video button label" },
+              { key: "business_video_id", label: "Business video YouTube ID" },
+            ]}
+            values={drafts.videos ?? {}}
+            onChange={(k, v) => updateDraft("videos", k, v)}
+            onSave={() => saveSection("videos")}
+            saving={saving === "videos"}
+          />
+          <p className="text-sm text-muted-foreground mt-3">
+            Paste only the video ID (the part after <code>v=</code> in the YouTube URL). Videos open in a popup on the
+            site so visitors never leave.
+          </p>
         </TabsContent>
       </Tabs>
     </div>
