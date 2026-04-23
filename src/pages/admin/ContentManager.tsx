@@ -298,6 +298,7 @@ const ContentManager = () => {
           <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="how">How It Works</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="prelaunch">Pre-launch</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="videos">Videos</TabsTrigger>
@@ -316,6 +317,21 @@ const ContentManager = () => {
             onChange={(k, v) => updateDraft("hero", k, v)}
             onSave={() => saveSection("hero")}
             saving={saving === "hero"}
+          />
+        </TabsContent>
+
+        <TabsContent value="pricing" className="mt-4">
+          <SectionForm
+            title="Project Performance System (Pricing Section)"
+            fields={[
+              { key: "heading_prefix", label: "Heading prefix (e.g. Project Performance)" },
+              { key: "heading_accent", label: "Heading accent (e.g. System)" },
+              { key: "intro", label: "Intro paragraph", type: "textarea" },
+            ]}
+            values={drafts.pricing ?? {}}
+            onChange={(k, v) => updateDraft("pricing", k, v)}
+            onSave={() => saveSection("pricing")}
+            saving={saving === "pricing"}
           />
         </TabsContent>
 
