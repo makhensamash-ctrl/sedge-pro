@@ -1,5 +1,4 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 type VideoModalProps = {
   videoId: string | null;
@@ -13,9 +12,7 @@ const VideoModal = ({ videoId, title, onClose }: VideoModalProps) => {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl w-[95vw] p-0 border-0 bg-black overflow-hidden">
-        <VisuallyHidden>
-          <DialogTitle>{title ?? "Video player"}</DialogTitle>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">{title ?? "Video player"}</DialogTitle>
         {videoId && (
           <div className="aspect-video w-full">
             <iframe
