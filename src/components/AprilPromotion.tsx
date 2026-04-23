@@ -22,6 +22,9 @@ const AprilPromotion = () => {
     original: "R100,000",
     valid_until_label: "Offer valid until 30 April 2026",
     intro: "We've officially launched our system, and for a limited time, you can access our complete platform and expert support services for a fraction of the cost through our exclusive pre-launch offer.",
+    badge: "Pre-Launch Special Offer",
+    heading_prefix: "Exclusive Pre-Launch Pricing,",
+    heading_accent: "Limited Time Only",
   });
   const deadline = useMemo(() => new Date(promo.deadline).getTime(), [promo.deadline]);
   const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
@@ -87,14 +90,14 @@ const AprilPromotion = () => {
           <div className="inline-flex items-center gap-2 text-accent mb-4">
             <Sparkles className="w-5 h-5" />
             <span className="text-sm font-semibold tracking-widest uppercase">
-              Pre-Launch Special Offer
+              {promo.badge}
             </span>
             <Sparkles className="w-5 h-5" />
           </div>
 
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-            Exclusive Pre-Launch Pricing,{" "}
-            <span className="text-accent">Limited Time Only</span>
+            {promo.heading_prefix}{" "}
+            <span className="text-accent">{promo.heading_accent}</span>
           </h2>
 
           <p className="text-primary-foreground/80 text-base md:text-lg mb-2 leading-relaxed whitespace-pre-line">

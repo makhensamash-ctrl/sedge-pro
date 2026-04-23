@@ -12,6 +12,13 @@ type VideoSettings = {
   business_video_label?: string;
 };
 
+type HeroSettings = {
+  title_prefix: string;
+  title_accent: string;
+  subtitle: string;
+  cta_label: string;
+};
+
 const DEFAULT_VIDEOS: VideoSettings = {
   project_video_id: "dQw4w9WgXcQ",
   project_video_label: "Watch Project Performance video",
@@ -19,8 +26,17 @@ const DEFAULT_VIDEOS: VideoSettings = {
   business_video_label: "Watch Business Performance demo",
 };
 
+const DEFAULT_HERO: HeroSettings = {
+  title_prefix: "Better Project Decisions. Better Outcomes.",
+  title_accent: "In Real Time.",
+  subtitle:
+    "The only platform that combines powerful construction management software with on-demand expert support.",
+  cta_label: "View Pre-launch Promotion",
+};
+
 const HeroSection = () => {
   const { value: videos } = useSiteSetting<VideoSettings>("videos", DEFAULT_VIDEOS);
+  const { value: hero } = useSiteSetting<HeroSettings>("hero", DEFAULT_HERO);
   const [activeVideo, setActiveVideo] = useState<{ id: string; title: string } | null>(null);
 
   return (
@@ -47,12 +63,11 @@ const HeroSection = () => {
             className="max-w-xl"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-primary-foreground mb-6">
-              Better Project Decisions. Better Outcomes.{" "}
-              <span className="text-accent">In Real Time.</span>
+              {hero.title_prefix}{" "}
+              <span className="text-accent">{hero.title_accent}</span>
             </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 leading-relaxed">
-              The only platform that combines powerful construction management software with
-              on-demand expert support.
+            <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 leading-relaxed whitespace-pre-line">
+              {hero.subtitle}
             </p>
             <div className="flex flex-wrap gap-4">
               {/*}
@@ -87,7 +102,7 @@ const HeroSection = () => {
                 href="#prelaunch-promotion"
                 className="bg-accent text-accent-foreground px-7 py-3 rounded-full font-semibold hover:bg-green-dark transition-colors"
               >
-                View Pre-launch Promotion
+                {hero.cta_label}
               </a>
             </div>
           </motion.div>
