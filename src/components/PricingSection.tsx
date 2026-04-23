@@ -28,6 +28,12 @@ interface PackageData {
 }
 
 const PricingSection = () => {
+  const { value: pricing } = useSiteSetting("pricing", {
+    heading_prefix: "Project Performance",
+    heading_accent: "System",
+    intro:
+      "Eight service areas designed to support planning, procurement, delivery, monitoring and performance for contractors, consultants and clients across their entire projects portfolio. Each service has built-in digital tools designed for ease of use by ordinary people with limited experience background.",
+  });
   const [packages, setPackages] = useState<PackageData[]>([]);
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
   const [selectedPkg, setSelectedPkg] = useState<PackageData | null>(null);
