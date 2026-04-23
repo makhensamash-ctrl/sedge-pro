@@ -16,13 +16,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X, RefreshCw } from "lucide-react";
-import { PDFDownloadLink } from "@react-pdf/renderer";
+import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X, RefreshCw, Send, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/invoicing/InvoicePDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
 import { ProductLineItems } from "@/components/invoicing/ProductLineItems";
 import { ClientSearchSelect } from "@/components/invoicing/ClientSearchSelect";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Invoice {
   id: string;
