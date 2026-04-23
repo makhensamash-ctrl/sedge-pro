@@ -12,13 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter } from "lucide-react";
-import { PDFDownloadLink } from "@react-pdf/renderer";
+import { FileText, Plus, Search, Download, Eye, Filter, Send } from "lucide-react";
+import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { QuotationPDF } from "@/components/invoicing/QuotationPDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
 import { ProductLineItems } from "@/components/invoicing/ProductLineItems";
 import { ClientSearchSelect } from "@/components/invoicing/ClientSearchSelect";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Quotation {
   id: string;
@@ -58,6 +59,9 @@ const Quotations = () => {
   const [businessProfiles, setBusinessProfiles] = useState<any[]>([]);
   const [viewingQuotation, setViewingQuotation] = useState<Quotation | null>(null);
   const [viewLineItems, setViewLineItems] = useState<any[]>([]);
+  const [sendingQuotation, setSendingQuotation] = useState<Quotation | null>(null);
+  const [sendRecipient, setSendRecipient] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const generateQuotationNumber = () => {
     const now = new Date();
@@ -260,6 +264,61 @@ const Quotations = () => {
     setViewLineItems(lineItems || []);
   };
 
+  const openSendDialog = (q: Quotation) => {
+    setSendingQuotation(q);
+    setSendRecipient(q.clients?.email || "");
+  };
+
+  const handleSendQuotation = async () => {
+    if (!sendingQuotation) return;
+    if (!sendRecipient.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sendRecipient.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsSending(true);
+    try {
+      const { data: lineItems } = await supabase.from('quotation_line_items').select('*').eq('quotation_id', sendingQuotation.id).order('sort_order');
+      const items = (lineItems || []).map((li: any) => ({
+        name: li.product_name,
+        description: li.description,
+        quantity: Number(li.quantity),
+        price: Number(li.unit_price),
+        total: Number(li.total_price),
+      }));
+
+      let pdfBase64: string | undefined;
+      try {
+        const blob = await pdf(
+          <QuotationPDF
+            quotation={{ ...sendingQuotation, client: sendingQuotation.clients || undefined, business_profile: sendingQuotation.business_profiles || undefined }}
+            items={items as any}
+          />
+        ).toBlob();
+        const buf = await blob.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        pdfBase64 = btoa(binary);
+      } catch (e) {
+        console.error("PDF generation failed, sending without attachment:", e);
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-quotation-email", {
+        body: { quotationId: sendingQuotation.id, recipient: sendRecipient.trim(), pdfBase64 },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Quotation emailed to ${sendRecipient.trim()}`);
+      setSendingQuotation(null);
+      refetch();
+    } catch (e: any) {
+      toast.error(`Failed to send: ${e?.message || "Unknown error"}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const totalAmount = filteredQuotations.reduce((sum, q) => sum + Number(q.total_amount), 0);
   const acceptedAmount = filteredQuotations.filter(q => q.status === 'accepted').reduce((sum, q) => sum + Number(q.total_amount), 0);
 
@@ -331,7 +390,16 @@ const Quotations = () => {
                 <TableCell className="text-sm">{q.expiry_date ? new Date(q.expiry_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => viewQuotationDetails(q)}><Eye className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => viewQuotationDetails(q)} title="View"><Eye className="w-3 h-3" /></Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSendDialog(q)}
+                      title="Send via email"
+                      disabled={!q.business_profiles}
+                    >
+                      <Send className="w-3 h-3" />
+                    </Button>
                     {!q.converted_to_invoice ? (
                       <Button variant="ghost" size="sm" onClick={() => convertToInvoice(q)} title="Convert to Invoice"><FileText className="w-3 h-3" /></Button>
                     ) : (
@@ -343,7 +411,7 @@ const Quotations = () => {
                         fileName={`quotation-${q.quotation_number}.pdf`}
                       >
                         {({ loading }) => (
-                          <Button variant="ghost" size="sm" disabled={loading}><Download className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="sm" disabled={loading} title="Download PDF"><Download className="w-3 h-3" /></Button>
                         )}
                       </PDFDownloadLink>
                     )}
@@ -505,6 +573,39 @@ const Quotations = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Quotation Dialog */}
+      <AlertDialog open={!!sendingQuotation} onOpenChange={(o) => !o && setSendingQuotation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send quotation {sendingQuotation?.quotation_number}</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will receive a branded email with the quotation PDF attached. Status will move to "Sent" automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Recipient email</Label>
+              <Input
+                type="email"
+                value={sendRecipient}
+                onChange={(e) => setSendRecipient(e.target.value)}
+                placeholder="client@example.com"
+                disabled={isSending}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              From: <span className="font-mono">SEDGE Pro &lt;onboarding@resend.dev&gt;</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendQuotation} disabled={isSending}>
+              {isSending ? "Sending..." : "Send email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

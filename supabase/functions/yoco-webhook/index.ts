@@ -125,13 +125,41 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If payment succeeded, move lead to Won stage
+    // If payment succeeded, move lead to Won stage AND send confirmation email
     if (newStatus === "completed" && payment) {
       const customerEmail = payment.customer_email;
       const customerName = (payment.metadata as any)?.customerName;
       const customerPhone = (payment.metadata as any)?.customerPhone;
       const packageName = payment.package_name;
       const amount = payment.amount_cents;
+      const invoiceNumberFromMeta = (payment.metadata as any)?.invoiceNumber;
+
+      // Fire-and-log payment confirmation email (non-blocking on failure)
+      if (customerEmail) {
+        try {
+          const sendRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-payment-confirmation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              recipient: customerEmail,
+              customerName,
+              packageName,
+              amountCents: amount,
+              paymentId: payment.id,
+              invoiceNumber: invoiceNumberFromMeta,
+            }),
+          });
+          if (!sendRes.ok) {
+            const txt = await sendRes.text().catch(() => "");
+            console.error("Payment confirmation email failed:", sendRes.status, txt);
+          }
+        } catch (e) {
+          console.error("Failed to invoke send-payment-confirmation:", e);
+        }
+      }
 
       const { data: wonStage } = await supabaseAdmin
         .from("pipeline_stages")

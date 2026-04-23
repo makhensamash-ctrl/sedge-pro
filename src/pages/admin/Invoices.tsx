@@ -16,13 +16,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X, RefreshCw } from "lucide-react";
-import { PDFDownloadLink } from "@react-pdf/renderer";
+import { FileText, Plus, Search, Download, Eye, Filter, CalendarIcon, X, RefreshCw, Send, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/invoicing/InvoicePDF";
 import { ProductsDialog } from "@/components/invoicing/ProductsDialog";
 import { ProductLineItems } from "@/components/invoicing/ProductLineItems";
 import { ClientSearchSelect } from "@/components/invoicing/ClientSearchSelect";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Invoice {
   id: string;
@@ -64,6 +65,10 @@ const Invoices = () => {
   const [businessProfiles, setBusinessProfiles] = useState<any[]>([]);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [viewLineItems, setViewLineItems] = useState<any[]>([]);
+  const [sendingInvoice, setSendingInvoice] = useState<Invoice | null>(null);
+  const [sendRecipient, setSendRecipient] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [showEmailHistory, setShowEmailHistory] = useState(false);
 
   const generateInvoiceNumber = () => {
     const now = new Date();
@@ -345,6 +350,79 @@ const Invoices = () => {
     setViewLineItems(lineItems || []);
   };
 
+  const openSendDialog = (inv: Invoice) => {
+    setSendingInvoice(inv);
+    setSendRecipient(inv.clients?.email || "");
+  };
+
+  const handleSendInvoice = async () => {
+    if (!sendingInvoice) return;
+    if (!sendRecipient.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sendRecipient.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsSending(true);
+    try {
+      // Fetch line items for the PDF
+      const { data: lineItems } = await supabase.from('invoice_line_items').select('*').eq('invoice_id', sendingInvoice.id).order('sort_order');
+      const items = (lineItems || []).map((li: any) => ({
+        name: li.product_name,
+        description: li.description,
+        quantity: Number(li.quantity),
+        price: Number(li.unit_price),
+        total: Number(li.total_price),
+      }));
+
+      // Generate PDF blob → base64
+      let pdfBase64: string | undefined;
+      try {
+        const blob = await pdf(
+          <InvoicePDF
+            invoice={{ ...sendingInvoice, client: sendingInvoice.clients || undefined, business_profile: sendingInvoice.business_profiles || undefined }}
+            items={items as any}
+          />
+        ).toBlob();
+        const buf = await blob.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        pdfBase64 = btoa(binary);
+      } catch (e) {
+        console.error("PDF generation failed, sending without attachment:", e);
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-invoice-email", {
+        body: { invoiceId: sendingInvoice.id, recipient: sendRecipient.trim(), pdfBase64 },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast.success(`Invoice emailed to ${sendRecipient.trim()}`);
+      setSendingInvoice(null);
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['invoice-email-log'] });
+    } catch (e: any) {
+      toast.error(`Failed to send: ${e?.message || "Unknown error"}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const { data: emailLog = [] } = useQuery({
+    queryKey: ['invoice-email-log'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_log')
+        .select('*')
+        .in('email_type', ['invoice', 'payment_confirmation'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   const totalAmount = filteredInvoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
   const paidAmount = filteredInvoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + Number(inv.total_amount), 0);
 
@@ -459,14 +537,23 @@ const Invoices = () => {
                 <TableCell className="text-sm">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => viewInvoiceDetails(inv)}><Eye className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => viewInvoiceDetails(inv)} title="View"><Eye className="w-3 h-3" /></Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSendDialog(inv)}
+                      title="Send via email"
+                      disabled={!inv.business_profiles}
+                    >
+                      <Send className="w-3 h-3" />
+                    </Button>
                     {inv.business_profiles && (
                       <PDFDownloadLink
                         document={<InvoicePDF invoice={{ ...inv, client: inv.clients || undefined, business_profile: inv.business_profiles || undefined }} items={[]} />}
                         fileName={`invoice-${inv.invoice_number}.pdf`}
                       >
                         {({ loading }) => (
-                          <Button variant="ghost" size="sm" disabled={loading}><Download className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="sm" disabled={loading} title="Download PDF"><Download className="w-3 h-3" /></Button>
                         )}
                       </PDFDownloadLink>
                     )}
@@ -679,6 +766,93 @@ const Invoices = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Invoice Dialog */}
+      <AlertDialog open={!!sendingInvoice} onOpenChange={(o) => !o && setSendingInvoice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send invoice {sendingInvoice?.invoice_number}</AlertDialogTitle>
+            <AlertDialogDescription>
+              The client will receive a branded email with the invoice PDF attached. Status will move to "Sent" automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Recipient email</Label>
+              <Input
+                type="email"
+                value={sendRecipient}
+                onChange={(e) => setSendRecipient(e.target.value)}
+                placeholder="client@example.com"
+                disabled={isSending}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              From: <span className="font-mono">SEDGE Pro &lt;onboarding@resend.dev&gt;</span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendInvoice} disabled={isSending}>
+              {isSending ? "Sending..." : "Send email"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Email History */}
+      <Card>
+        <CardContent className="p-0">
+          <button
+            type="button"
+            onClick={() => setShowEmailHistory((v) => !v)}
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-foreground">Email history</span>
+              <Badge variant="outline">{emailLog.length}</Badge>
+            </div>
+            {showEmailHistory ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {showEmailHistory && (
+            <div className="border-t">
+              {emailLog.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">No emails sent yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {emailLog.map((log: any) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-xs">{new Date(log.created_at).toLocaleString()}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{log.email_type}</Badge></TableCell>
+                        <TableCell className="text-sm">{log.recipient}</TableCell>
+                        <TableCell className="text-sm max-w-[280px] truncate" title={log.subject}>{log.subject}</TableCell>
+                        <TableCell>
+                          {log.status === "sent" ? (
+                            <Badge className="bg-accent text-accent-foreground">Sent</Badge>
+                          ) : (
+                            <Badge variant="destructive" title={log.error_message || ""}>Failed</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
