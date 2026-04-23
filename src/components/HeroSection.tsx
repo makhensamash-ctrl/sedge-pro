@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-image.jpg";
 import VideoModal from "@/components/VideoModal";
 import { useSiteSetting } from "@/hooks/useSiteContent";
+import { comment } from "postcss";
 
 type VideoSettings = {
   project_video_id?: string;
@@ -54,6 +55,7 @@ const HeroSection = () => {
               on-demand expert support.
             </p>
             <div className="flex flex-wrap gap-4">
+              {/*}
               <button
                 type="button"
                 onClick={() =>
@@ -80,6 +82,7 @@ const HeroSection = () => {
               >
                 {videos.business_video_label ?? "Watch Business Performance demo"}
               </button>
+              */}
               <a
                 href="#prelaunch-promotion"
                 className="bg-accent text-accent-foreground px-7 py-3 rounded-full font-semibold hover:bg-green-dark transition-colors"
