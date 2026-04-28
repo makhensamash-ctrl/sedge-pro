@@ -7,8 +7,11 @@ import PricingSection from "@/components/PricingSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import ChatBubble from "@/components/ChatBubble";
+import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 
-const Index = () => (
+const Index = () => {
+  useVisitorTracking();
+  return (
   <>
     <Navbar />
     <main>
@@ -22,6 +25,7 @@ const Index = () => (
     <Footer />
     <ChatBubble />
   </>
-);
+  );
+};
 
 export default Index;
