@@ -24,7 +24,8 @@ serve(async (req) => {
       });
     }
 
-    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress } = await req.json();
+    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress, paymentPlan } = await req.json();
+    const isMonthlyPlan = paymentPlan === "monthly";
 
     // Validate required fields
     if (!amount || typeof amount !== "number" || amount < 100 || amount > 100000000) {
@@ -160,12 +161,20 @@ serve(async (req) => {
         status: "sent",
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
-        description,
+        description: isMonthlyPlan ? `${description} (1 of 12)` : description,
         notes: [
           `Payment method: Card`,
+          isMonthlyPlan ? `Recurring plan: 12 monthly instalments` : null,
           regNumber ? `Registration: ${String(regNumber).slice(0, 50)}` : null,
           heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
         ].filter(Boolean).join("\n"),
+        is_recurring: isMonthlyPlan,
+        recurrence_interval: isMonthlyPlan ? "monthly" : null,
+        recurrence_count: 0,
+        recurrence_max: isMonthlyPlan ? 11 : null,
+        next_recurrence_date: isMonthlyPlan
+          ? new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString().slice(0, 10)
+          : null,
       })
       .select("id, invoice_number")
       .single();
