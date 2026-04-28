@@ -266,7 +266,9 @@ export type Database = {
           next_recurrence_date: string | null
           notes: string | null
           paid_amount: number | null
+          recurrence_count: number
           recurrence_interval: string | null
+          recurrence_max: number | null
           recurring_parent_id: string | null
           status: string
           tax_amount: number | null
@@ -289,7 +291,9 @@ export type Database = {
           next_recurrence_date?: string | null
           notes?: string | null
           paid_amount?: number | null
+          recurrence_count?: number
           recurrence_interval?: string | null
+          recurrence_max?: number | null
           recurring_parent_id?: string | null
           status?: string
           tax_amount?: number | null
@@ -312,7 +316,9 @@ export type Database = {
           next_recurrence_date?: string | null
           notes?: string | null
           paid_amount?: number | null
+          recurrence_count?: number
           recurrence_interval?: string | null
+          recurrence_max?: number | null
           recurring_parent_id?: string | null
           status?: string
           tax_amount?: number | null

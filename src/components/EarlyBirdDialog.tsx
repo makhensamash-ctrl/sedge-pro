@@ -103,6 +103,7 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
             businessName: formData.businessName.trim(),
             regNumber: formData.regNumber.trim(),
             billingAddress: formData.billingAddress.trim(),
+            paymentPlan: formData.plan,
             lineItems: [
               {
                 displayName: `Pre-Launch Promotion — ${selectedPlan.label}`,

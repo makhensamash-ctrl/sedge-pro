@@ -84,6 +84,18 @@ Deno.serve(async (req) => {
     let generated = 0;
 
     for (const invoice of dueInvoices) {
+      // Enforce recurrence_max cap (e.g. 12 monthly instalments → max 11 children)
+      const currentCount = invoice.recurrence_count ?? 0;
+      const maxCount = invoice.recurrence_max;
+      if (maxCount !== null && maxCount !== undefined && currentCount >= maxCount) {
+        // Cap reached — disable further generation
+        await supabase
+          .from("invoices")
+          .update({ next_recurrence_date: null, is_recurring: false })
+          .eq("id", invoice.id);
+        continue;
+      }
+
       const now = new Date();
       const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 
@@ -100,6 +112,14 @@ Deno.serve(async (req) => {
         nextDate.setMonth(nextDate.getMonth() + 1);
       }
 
+      const newCount = currentCount + 1;
+      const instalmentLabel = maxCount
+        ? ` (${newCount + 1} of ${maxCount + 1})`
+        : "";
+      const childDescription = invoice.description
+        ? invoice.description.replace(/\s*\(\d+\s+of\s+\d+\)\s*$/, "") + instalmentLabel
+        : `Recurring invoice${instalmentLabel}`;
+
       const { data: newInvoice, error: insertError } = await supabase
         .from("invoices")
         .insert({
@@ -115,7 +135,7 @@ Deno.serve(async (req) => {
           is_recurring: false,
           recurring_parent_id: invoice.id,
           currency: invoice.currency,
-          description: invoice.description,
+          description: childDescription,
           notes: invoice.notes,
         })
         .select("id")
@@ -154,9 +174,15 @@ Deno.serve(async (req) => {
         metadata: { invoice_id: newInvoice.id, source: "recurring_invoice" },
       });
 
+      // Increment count + advance schedule. If we just hit the cap, stop scheduling.
+      const reachedCap = maxCount !== null && maxCount !== undefined && newCount >= maxCount;
       await supabase
         .from("invoices")
-        .update({ next_recurrence_date: nextDate.toISOString().split("T")[0] })
+        .update({
+          recurrence_count: newCount,
+          next_recurrence_date: reachedCap ? null : nextDate.toISOString().split("T")[0],
+          is_recurring: reachedCap ? false : true,
+        })
         .eq("id", invoice.id);
 
       generated++;
