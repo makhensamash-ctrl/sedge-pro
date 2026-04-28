@@ -10,6 +10,7 @@ import SalespersonPerformance from "@/components/analytics/SalespersonPerformanc
 import DateRangeFilter, { DateRange } from "@/components/analytics/DateRangeFilter";
 import RevenueTargetDialog, { RevenueTarget } from "@/components/analytics/RevenueTargetDialog";
 import RevenueTargetProgress from "@/components/analytics/RevenueTargetProgress";
+import VisitorStats from "@/components/analytics/VisitorStats";
 
 const PALETTE = {
   navy: "hsl(210, 65%, 17%)",
@@ -131,6 +132,9 @@ const Analytics = () => {
           <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
         </div>
       </div>
+
+      {/* Visitor Stats */}
+      <VisitorStats />
 
       {/* Revenue Target Progress */}
       <RevenueTargetProgress targets={targets} />
