@@ -158,7 +158,9 @@ Deno.serve(async (req) => {
         notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
-        next_recurrence_date: paymentPlan === "monthly" 
+        recurrence_count: 0,
+        recurrence_max: paymentPlan === "monthly" ? 11 : null,
+        next_recurrence_date: paymentPlan === "monthly"
           ? new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString().slice(0, 10)
           : null,
       })
