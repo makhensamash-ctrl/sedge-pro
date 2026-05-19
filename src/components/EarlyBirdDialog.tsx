@@ -16,8 +16,8 @@ interface EarlyBirdDialogProps {
 }
 
 const paymentPlans = [
-  { id: "once-off", label: "Once-off Payment", price: "R20,000", description: "Single payment — best value", amountCents: 2000000 },
-  { id: "monthly", label: "Monthly Instalments", price: "R3,000/month", description: "12 monthly payments of R3,000 (R36,000 total)", amountCents: 300000 },
+  { id: "once-off", label: "Once-off Payment", price: "R5,000", description: "Single payment — best value", amountCents: 2000000 },
+  { id: "monthly", label: "Monthly Instalments", price: "R700/month", description: "12 monthly payments of R700 (R8,400 total)", amountCents: 300000 },
 ];
 
 const heardAboutOptions = ["Google Search", "Social Media", "Referral", "Industry Event", "Word of Mouth", "Other"];

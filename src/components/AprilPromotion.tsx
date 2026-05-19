@@ -7,7 +7,7 @@ import { useSiteSetting } from "@/hooks/useSiteContent";
 
 const features = [
   "Ongoing remote expert support",
-  "Full access to all system modules",
+  // "Full access to all system modules",
   "Unlimited users",
   "Unlimited projects",
   "Guided remote onboarding and setup",
