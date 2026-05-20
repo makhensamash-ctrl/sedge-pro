@@ -3,7 +3,9 @@ import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-image.jpg";
 import VideoModal from "@/components/VideoModal";
 import { useSiteSetting } from "@/hooks/useSiteContent";
-import { comment } from "postcss";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 
 type VideoSettings = {
   project_video_id?: string;
@@ -30,7 +32,7 @@ const DEFAULT_HERO: HeroSettings = {
   title_prefix: "Better Project Decisions. Better Outcomes.",
   title_accent: "In Real Time.",
   subtitle:
-    "The only platform that combines powerful construction management software with on-demand expert support.",
+    "The only platform that combines powerful construction management software with on-demand expert support — so your team can focus on the build, not the busywork.",
   cta_label: "View Pre-launch Promotion",
 };
 
@@ -38,6 +40,50 @@ const HeroSection = () => {
   const { value: videos } = useSiteSetting<VideoSettings>("videos", DEFAULT_VIDEOS);
   const { value: hero } = useSiteSetting<HeroSettings>("hero", DEFAULT_HERO);
   const [activeVideo, setActiveVideo] = useState<{ id: string; title: string } | null>(null);
+
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("create-lead", {
+        body: {
+          client_name: email.trim().split("@")[0] || email.trim(),
+          email: email.trim().toLowerCase(),
+          source: "hero_original",
+          notes: "Pre-launch sign-up via Main Hero. Founding member.",
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Welcome aboard! Pre-launch spot secured. Redirecting you to complete registration...");
+      setEmail("");
+      localStorage.setItem("sedge_lead_email", email.trim().toLowerCase());
+      
+      setTimeout(() => {
+        window.location.href = "https://app.sedgepro.co.za/users/auth/register/";
+      }, 1500);
+    } catch (err: any) {
+      console.error("Lead capture error:", err);
+      toast.error(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section
@@ -67,40 +113,38 @@ const HeroSection = () => {
               <span className="text-accent">{hero.title_accent}</span>
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 leading-relaxed whitespace-pre-line">
-              {hero.subtitle}
+              {hero.subtitle} 
             </p>
-            <div className="flex flex-wrap gap-4">
-              {/*}
-              <button
-                type="button"
-                onClick={() =>
-                  videos.project_video_id &&
-                  setActiveVideo({
-                    id: videos.project_video_id,
-                    title: videos.project_video_label ?? "Project Performance video",
-                  })
-                }
-                className="border-2 border-primary-foreground/60 text-primary-foreground px-7 py-3 rounded-full font-semibold hover:bg-primary-foreground/10 transition-colors"
-              >
-                {videos.project_video_label ?? "Watch Project Performance video"}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  videos.business_video_id &&
-                  setActiveVideo({
-                    id: videos.business_video_id,
-                    title: videos.business_video_label ?? "Business Performance demo",
-                  })
-                }
-                className="border-2 border-primary-foreground/60 text-primary-foreground px-7 py-3 rounded-full font-semibold hover:bg-primary-foreground/10 transition-colors"
-              >
-                {videos.business_video_label ?? "Watch Business Performance demo"}
-              </button>
-              */}
+            <div className="flex flex-col gap-4 w-full max-w-2xl">
+              {/* Email Lead Capture Form */}
+              <div className="w-full sm:flex-1  p-2 rounded-2xl shadow-xl">
+                <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@company.co.za"
+                    disabled={loading}
+                    className="flex-1 bg-white/5 text-white placeholder:text-slate-300 text-sm border border-white/15 px-4 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-[#5BB624] focus:border-transparent transition-all animate-none"
+                    aria-label="Email address"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-2.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
+                  >
+                    {loading ? "..." : "Access Demo"}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              </div>
+              <hr className="border-t border-white/20 my-4" />
+
+              {/* View Pre-launch Promotion button */}
               <a
                 href="#prelaunch-promotion"
-                className="bg-accent text-accent-foreground px-7 py-3 rounded-full font-semibold hover:bg-green-dark transition-colors"
+                 className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
                 {hero.cta_label}
               </a>
