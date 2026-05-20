@@ -455,7 +455,7 @@ const Demo = () => {
                             } ${widthPercent} ${alignClass}`}
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}
-                            originX={0}
+                            style={{ originX: 0 }}
                             transition={{ duration: 0.6 }}
                           />
                         </div>
