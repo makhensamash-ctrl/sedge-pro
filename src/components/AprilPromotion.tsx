@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, Clock, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import EarlyBirdDialog from "@/components/EarlyBirdDialog";
 import { useSiteSetting } from "@/hooks/useSiteContent";
@@ -29,6 +29,7 @@ const AprilPromotion = () => {
   const deadline = useMemo(() => new Date(promo.deadline).getTime(), [promo.deadline]);
   const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setTimeLeft(deadline - Date.now());
@@ -43,6 +44,40 @@ const AprilPromotion = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [deadline]);
+
+  // Auto-open dialog when URL hash contains promo=open
+  // Works for both:
+  //   #prelaunch-promotion?promo=open  (hash-first, direct browser entry)
+  //   /?promo=open#prelaunch-promotion  (query-first, React Router Link)
+  useEffect(() => {
+    const checkAndOpen = () => {
+      const hash = window.location.hash;         // e.g. #prelaunch-promotion?promo=open
+      const search = window.location.search;    // e.g. ?promo=open
+      const promoInHash = hash.includes("promo=open");
+      const promoInSearch = new URLSearchParams(search).get("promo") === "open";
+
+      if (promoInHash || promoInSearch) {
+        // Scroll into view
+        setTimeout(() => {
+          sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+        // Open dialog after scroll
+        setTimeout(() => {
+          setDialogOpen(true);
+          // Clean up the URL (remove promo param, keep clean hash)
+          const cleanUrl = window.location.pathname + "#prelaunch-promotion";
+          window.history.replaceState(null, "", cleanUrl);
+        }, 600);
+      }
+    };
+
+    // Run on mount
+    checkAndOpen();
+
+    // Also react to hash changes (e.g. navigating from another page)
+    window.addEventListener("hashchange", checkAndOpen);
+    return () => window.removeEventListener("hashchange", checkAndOpen);
+  }, []);
 
   if (timeLeft <= 0) return null;
 
@@ -59,7 +94,7 @@ const AprilPromotion = () => {
   ];
 
   return (
-    <section id="prelaunch-promotion" className="relative py-16 md:py-24 bg-gradient-to-br from-primary via-[hsl(var(--navy-light))] to-primary overflow-hidden">
+    <section ref={sectionRef} id="prelaunch-promotion" className="relative py-16 md:py-24 bg-gradient-to-br from-primary via-[hsl(var(--navy-light))] to-primary overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-72 h-72 bg-accent rounded-full blur-3xl" />

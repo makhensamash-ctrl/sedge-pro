@@ -236,7 +236,7 @@ const Demo = () => {
             Demo Mode Active
           </div>
           <Link
-            to="/#prelaunch-promotion"
+            to="/#prelaunch-promotion?promo=open"
             className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-extrabold px-4 py-2 rounded-full transition-all shadow-lg shadow-[#5BB624]/10"
           >
             Claim discount
