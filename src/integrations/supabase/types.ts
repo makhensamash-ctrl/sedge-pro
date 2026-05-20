@@ -556,7 +556,6 @@ export type Database = {
           },
         ]
       }
-
       packages: {
         Row: {
           created_at: string
