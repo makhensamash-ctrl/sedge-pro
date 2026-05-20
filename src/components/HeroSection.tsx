@@ -44,51 +44,12 @@ const HeroSection = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      toast.error("Please enter your email address.");
-      return;
-    }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.functions.invoke("create-lead", {
-        body: {
-          client_name: email.trim().split("@")[0] || email.trim(),
-          email: email.trim().toLowerCase(),
-          source: "hero_original",
-          notes: "Pre-launch sign-up via Main Hero. Founding member.",
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success("Welcome aboard! Pre-launch spot secured. Redirecting you to complete registration...");
-      setEmail("");
-      localStorage.setItem("sedge_lead_email", email.trim().toLowerCase());
-      
-      setTimeout(() => {
-        window.location.href = "https://app.sedgepro.co.za/users/auth/register/";
-      }, 1500);
-    } catch (err: any) {
-      console.error("Lead capture error:", err);
-      toast.error(err.message || "Failed to submit. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <section
       id="home"
-      className="relative min-h-[90vh] flex items-center pt-16 overflow-hidden bg-primary"
+      className="relative lg:min-h-[90vh] flex items-center px-8 py-16 mt-8 overflow-hidden bg-primary"
     >
       {/* Background image with overlay */}
       <div className="absolute inset-0">
@@ -115,38 +76,25 @@ const HeroSection = () => {
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 leading-relaxed whitespace-pre-line">
               {hero.subtitle} 
             </p>
-            <div className="flex flex-col gap-4 w-full max-w-2xl">
-              {/* Email Lead Capture Form */}
-              <div className="w-full sm:flex-1  p-2 rounded-2xl shadow-xl">
-                <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@company.co.za"
-                    disabled={loading}
-                    className="flex-1 bg-white/5 text-white placeholder:text-slate-300 text-sm border border-white/15 px-4 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-[#5BB624] focus:border-transparent transition-all animate-none"
-                    aria-label="Email address"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-2.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
-                  >
-                    {loading ? "..." : "Access Demo"}
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-              <hr className="border-t border-white/20 my-4" />
+              <hr className="border-t border-white/20 my-8" />
+            <div className="flex  gap-4 w-full max-w-2xl">
+             
+            
 
               {/* View Pre-launch Promotion button */}
+            
               <a
                 href="#prelaunch-promotion"
                  className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
                 {hero.cta_label}
+              </a>
+                 <a
+                href="#demo-form"
+                 className="border border-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
+              >
+                {'Access Demo'}
+                <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
           </motion.div>
