@@ -32,7 +32,7 @@ const DEFAULT_HERO: HeroSettings = {
   title_prefix: "Better Project Decisions. Better Outcomes.",
   title_accent: "In Real Time.",
   subtitle:
-    "The only platform that combines powerful construction management software with on-demand expert support — so your team can focus on the build, not the busywork.",
+    "Commit only platform that combines powerful construction management software with on-demand expert support — so your team can focus on the build, not the busywork.",
   cta_label: "View Pre-launch Promotion",
 };
 
