@@ -17,8 +17,8 @@ const features = [
 const AprilPromotion = () => {
   const { value: promo } = useSiteSetting("prelaunch", {
     deadline: "2026-04-30T23:59:59",
-    once_off: "R20,000",
-    monthly: "R3,000",
+    once_off: "R 5,000",
+    monthly: "R 700",
     original: "R100,000",
     valid_until_label: "Offer valid until 30 April 2026",
     intro: "We've officially launched our system, and for a limited time, you can access our complete platform and expert support services for a fraction of the cost through our exclusive pre-launch offer.",
@@ -110,19 +110,19 @@ const AprilPromotion = () => {
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 my-10">
             <div className="relative w-full sm:w-56 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 p-5 text-center">
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-[10px] font-bold px-3 py-0.5 rounded-full">
                 Best value
               </span>
-              <span className="block text-3xl md:text-4xl font-extrabold text-accent">{promo.once_off}</span>
+              <span className="block text-3xl md:text-4xl font-extrabold text-accent"><b>R</b> {promo.once_off}<span className="text-lg font-semibold">/yr</span></span>
               <span className="block text-sm text-primary-foreground/70 mt-1">Once-off Payment</span>
             </div>
 
             <span className="text-primary-foreground/40 font-semibold text-sm">OR</span>
 
             <div className="w-full sm:w-56 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 p-5 text-center">
-              <span className="block text-3xl md:text-4xl font-extrabold text-accent">{promo.monthly}<span className="text-lg font-semibold">/mo</span></span>
+              <span className="block text-3xl md:text-4xl font-extrabold text-accent"><b>R</b> {promo.monthly}<span className="text-lg font-semibold">/mo</span></span>
               
             </div>
           </div>
