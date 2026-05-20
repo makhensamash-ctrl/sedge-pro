@@ -93,7 +93,7 @@ const NewHeroSection = () => {
 
             {/* Subheadline */}
             <p className="text-base sm:text-lg text-slate-300 max-w-xl mb-8 leading-relaxed">
-              The only platform that combines powerful construction management software with on-demand expert support — so your team can focus on the build, not the busywork.
+              Commit only platform that combines powerful construction management software with on-demand expert support — so your team can focus on the build, not the busywork.
             </p>
 
        
