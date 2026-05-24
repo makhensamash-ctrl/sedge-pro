@@ -23,6 +23,7 @@ interface EarlyBirdDialogProps {
     billingAddress?: string;
     heardAbout?: string;
     plan?: string;
+    fromExternal?: boolean;
   };
 }
 
@@ -262,10 +263,12 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
                   <Label htmlFor="eb-business">Business Name *</Label>
                   <Input id="eb-business" placeholder="My Construction Co." value={formData.businessName} onChange={(e) => handleChange("businessName", e.target.value)} required maxLength={100} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="eb-reg">Registration Number</Label>
-                  <Input id="eb-reg" placeholder="2024/123456/07" value={formData.regNumber} onChange={(e) => handleChange("regNumber", e.target.value)} maxLength={50} />
-                </div>
+                {!initialData?.fromExternal && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="eb-reg">Registration Number</Label>
+                    <Input id="eb-reg" placeholder="2024/123456/07" value={formData.regNumber} onChange={(e) => handleChange("regNumber", e.target.value)} maxLength={50} />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -273,19 +276,21 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
                 <Textarea id="eb-address" placeholder="123 Main Street, Sandton, 2196" value={formData.billingAddress} onChange={(e) => handleChange("billingAddress", e.target.value)} rows={2} />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="eb-heard">Where did you hear about us?</Label>
-                <Select value={formData.heardAbout} onValueChange={(v) => handleChange("heardAbout", v)}>
-                  <SelectTrigger id="eb-heard">
-                    <SelectValue placeholder="Select an option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {heardAboutOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!initialData?.fromExternal && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="eb-heard">Where did you hear about us?</Label>
+                  <Select value={formData.heardAbout} onValueChange={(v) => handleChange("heardAbout", v)}>
+                    <SelectTrigger id="eb-heard">
+                      <SelectValue placeholder="Select an option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heardAboutOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Choose Your Payment Plan</Label>

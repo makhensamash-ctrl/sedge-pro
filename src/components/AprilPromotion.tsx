@@ -89,6 +89,7 @@ const AprilPromotion = () => {
           billingAddress,
           heardAbout,
           plan,
+          fromExternal: true,
         });
 
         // Scroll into view
