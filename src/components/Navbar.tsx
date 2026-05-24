@@ -32,10 +32,10 @@ const Navbar = () => {
             </a>
           ))}
           <a
-            href="#pricing"
+            href="#prelaunch-promotion?promo=open"
             className="bg-accent text-accent-foreground px-5 py-2 rounded-full text-sm font-semibold hover:bg-green-dark transition-colors"
           >
-            Get Started
+            Buy Now
           </a>
         </div>
 
@@ -63,11 +63,11 @@ const Navbar = () => {
             </a>
           ))}
           <a
-            href="#pricing"
+            href="#prelaunch-promotion?promo=open"
             onClick={() => setOpen(false)}
             className="mt-2 block text-center bg-accent text-accent-foreground px-5 py-2 rounded-full text-sm font-semibold"
           >
-            Get Started
+           Buy Now
           </a>
         </div>
       )}

@@ -31,7 +31,7 @@ const SectionForm = ({
   saving,
 }: {
   title: string;
-  fields: { key: string; label: string; type?: "text" | "textarea" | "datetime-local" }[];
+  fields: { key: string; label: string; type?: "text" | "textarea" | "datetime-local" | "number" }[];
   values: Record<string, string>;
   onChange: (k: string, v: string) => void;
   onSave: () => void;
@@ -249,7 +249,16 @@ const ContentManager = () => {
       supabase.from("site_cards").select("*").order("position"),
     ]);
     const map: SettingMap = {};
-    (s ?? []).forEach((row: any) => (map[row.key] = row.value));
+    (s ?? []).forEach((row: any) => {
+      let val = row.value;
+      if (row.key === "prelaunch" && val) {
+        val = { ...val };
+        if (val.once_off) val.once_off = String(val.once_off).replace(/[^0-9]/g, "");
+        if (val.monthly) val.monthly = String(val.monthly).replace(/[^0-9]/g, "");
+        if (val.original) val.original = String(val.original).replace(/[^0-9]/g, "");
+      }
+      map[row.key] = val;
+    });
     setSettings(map);
     setDrafts(JSON.parse(JSON.stringify(map)));
     setCards((c as SiteCard[]) ?? []);
@@ -264,6 +273,44 @@ const ContentManager = () => {
     setDrafts((prev) => ({ ...prev, [sectionKey]: { ...prev[sectionKey], [field]: value } }));
 
   const saveSection = async (key: string) => {
+    if (key === "prelaunch") {
+      const onceOff = drafts.prelaunch?.once_off;
+      const monthly = drafts.prelaunch?.monthly;
+      const original = drafts.prelaunch?.original;
+
+      const isNumeric = (val: any) => {
+        if (val === undefined || val === null || val === "") return false;
+        return /^\d+$/.test(String(val).trim());
+      };
+
+      if (!onceOff || !isNumeric(onceOff)) {
+        toast({
+          title: "Validation Error",
+          description: "Once-off price must be a positive whole number (digits only, e.g. 5000).",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!monthly || !isNumeric(monthly)) {
+        toast({
+          title: "Validation Error",
+          description: "Monthly price must be a positive whole number (digits only, e.g. 700).",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (original && !isNumeric(original)) {
+        toast({
+          title: "Validation Error",
+          description: "Original price must be a positive whole number (digits only, e.g. 100000).",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSaving(key);
     const { error } = await supabase
       .from("site_settings")
@@ -387,9 +434,9 @@ const ContentManager = () => {
               { key: "deadline", label: "Countdown deadline (YYYY-MM-DDTHH:MM:SS)" },
               { key: "valid_until_label", label: "Valid until label" },
               { key: "intro", label: "Intro paragraph", type: "textarea" },
-              { key: "original", label: "Original price (e.g. R100,000)" },
-              { key: "once_off", label: "Once-off price (e.g. R20,000)" },
-              { key: "monthly", label: "Monthly price (e.g. R3,000)" },
+              { key: "original", label: "Original price (e.g. 100000)", type: "number" },
+              { key: "once_off", label: "Once-off price (e.g. 5000)", type: "number" },
+              { key: "monthly", label: "Monthly price (e.g. 700)", type: "number" },
             ]}
             values={drafts.prelaunch ?? {}}
             onChange={(k, v) => updateDraft("prelaunch", k, v)}

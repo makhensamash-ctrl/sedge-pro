@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +9,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, CreditCard, Building2, ArrowLeft, Copy } from "lucide-react";
+import { useSiteSetting } from "@/hooks/useSiteContent";
 
 interface EarlyBirdDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+    client_name?: string;
+    email?: string;
+    phone?: string;
+    businessName?: string;
+    regNumber?: string;
+    billingAddress?: string;
+    heardAbout?: string;
+    plan?: string;
+  };
 }
 
-const paymentPlans = [
-  { id: "once-off", label: "Once-off Payment", price: "R 5,000", description: "Single payment — best value", amountCents: 2000000 },
-  { id: "monthly", label: "Monthly Instalments", price: "R 700/month", description: "12 monthly payments of R 700 (R8,400 total)", amountCents: 300000 },
-];
+const parsePriceToCents = (priceStr: string | number | undefined | null, defaultCents: number): number => {
+  if (priceStr === undefined || priceStr === null) return defaultCents;
+  const str = String(priceStr).trim();
+  if (!str) return defaultCents;
+
+  const cleaned = str.replace(/[^0-9.]/g, "");
+  if (!cleaned) return defaultCents;
+
+  const parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return defaultCents;
+
+  const dotIndex = cleaned.lastIndexOf(".");
+  if (dotIndex !== -1 && cleaned.length - dotIndex - 1 === 2) {
+    return Math.round(parsed * 100);
+  }
+
+  return Math.round(parseFloat(cleaned.replace(/\./g, "")) * 100);
+};
 
 const heardAboutOptions = ["Google Search", "Social Media", "Referral", "Industry Event", "Word of Mouth", "Other"];
+
 
 type Step = "form" | "payment-method" | "eft-success" | "card-redirect";
 
@@ -32,7 +58,38 @@ interface BankDetails {
   reference: string;
 }
 
-const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
+const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogProps) => {
+  const { value: promo } = useSiteSetting("prelaunch", {
+    once_off: "5000",
+    monthly: "700",
+  });
+
+  const paymentPlans = useMemo(() => {
+    const onceOffCents = parsePriceToCents(promo.once_off, 500000);
+    const onceOffRands = onceOffCents / 100;
+
+    const monthlyCents = parsePriceToCents(promo.monthly, 70000);
+    const monthlyRands = monthlyCents / 100;
+    const totalMonthlyRands = monthlyRands * 12;
+
+    return [
+      {
+        id: "once-off",
+        label: "Once-off Payment",
+        price: `R ${onceOffRands.toLocaleString("en-ZA")}`,
+        description: "Single payment — best value",
+        amountCents: onceOffCents,
+      },
+      {
+        id: "monthly",
+        label: "Monthly Instalments",
+        price: `R ${monthlyRands.toLocaleString("en-ZA")}`,
+        description: `12 monthly payments of R ${monthlyRands.toLocaleString("en-ZA")} (R ${totalMonthlyRands.toLocaleString("en-ZA")} total)`,
+        amountCents: monthlyCents,
+      },
+    ];
+  }, [promo.once_off, promo.monthly]);
+
   const [step, setStep] = useState<Step>("form");
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"eft" | "card">("eft");
@@ -50,11 +107,36 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
     plan: "once-off",
   });
 
+  useEffect(() => {
+    if (open && initialData) {
+      setFormData((prev) => {
+        const next = { ...prev };
+        if (initialData.client_name) next.client_name = initialData.client_name;
+        if (initialData.email) next.email = initialData.email;
+        if (initialData.phone) next.phone = initialData.phone;
+        if (initialData.businessName) next.businessName = initialData.businessName;
+        if (initialData.regNumber) next.regNumber = initialData.regNumber;
+        if (initialData.billingAddress) next.billingAddress = initialData.billingAddress;
+        if (initialData.heardAbout) {
+          const matchedOption = heardAboutOptions.find(
+            (opt) => opt.toLowerCase() === initialData.heardAbout?.toLowerCase()
+          );
+          next.heardAbout = matchedOption || initialData.heardAbout;
+        }
+        if (initialData.plan && (initialData.plan === "once-off" || initialData.plan === "monthly")) {
+          next.plan = initialData.plan;
+        }
+        return next;
+      });
+    }
+  }, [open, initialData]);
+
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const selectedPlan = paymentPlans.find((p) => p.id === formData.plan)!;
+
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +163,7 @@ const EarlyBirdDialog = ({ open, onOpenChange }: EarlyBirdDialogProps) => {
             paymentPlan: formData.plan,
             planLabel: selectedPlan.label,
             planPrice: selectedPlan.price,
+            amount: selectedPlan.amountCents / 100,
           },
         });
 

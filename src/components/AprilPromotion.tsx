@@ -29,6 +29,7 @@ const AprilPromotion = () => {
   const deadline = useMemo(() => new Date(promo.deadline).getTime(), [promo.deadline]);
   const [timeLeft, setTimeLeft] = useState(deadline - Date.now());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [initialData, setInitialData] = useState<any>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -45,18 +46,51 @@ const AprilPromotion = () => {
     return () => clearInterval(timer);
   }, [deadline]);
 
-  // Auto-open dialog when URL hash contains promo=open
+  // Helper to parse query parameters from search and hash
+  const getQueryParams = () => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const hashQuestionIndex = hash.indexOf("?");
+    if (hashQuestionIndex !== -1) {
+      const hashParams = new URLSearchParams(hash.substring(hashQuestionIndex + 1));
+      for (const [key, val] of hashParams.entries()) {
+        params.set(key, val);
+      }
+    }
+    return params;
+  };
+
+  // Auto-open dialog when URL hash or search contains promo=open
   // Works for both:
   //   #prelaunch-promotion?promo=open  (hash-first, direct browser entry)
   //   /?promo=open#prelaunch-promotion  (query-first, React Router Link)
   useEffect(() => {
     const checkAndOpen = () => {
-      const hash = window.location.hash;         // e.g. #prelaunch-promotion?promo=open
-      const search = window.location.search;    // e.g. ?promo=open
-      const promoInHash = hash.includes("promo=open");
-      const promoInSearch = new URLSearchParams(search).get("promo") === "open";
+      const params = getQueryParams();
+      const promoOpen = params.get("promo") === "open";
 
-      if (promoInHash || promoInSearch) {
+      if (promoOpen) {
+        // Extract form data for pre-population
+        const client_name = params.get("client_name") || params.get("name") || params.get("fullname") || "";
+        const email = params.get("email") || "";
+        const phone = params.get("phone") || params.get("tel") || "";
+        const businessName = params.get("businessName") || params.get("business") || params.get("company") || "";
+        const regNumber = params.get("regNumber") || params.get("reg") || "";
+        const billingAddress = params.get("billingAddress") || params.get("address") || "";
+        const heardAbout = params.get("heardAbout") || params.get("heard") || params.get("source") || "";
+        const plan = params.get("plan") || "";
+
+        setInitialData({
+          client_name,
+          email,
+          phone,
+          businessName,
+          regNumber,
+          billingAddress,
+          heardAbout,
+          plan,
+        });
+
         // Scroll into view
         setTimeout(() => {
           sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -226,7 +260,7 @@ const AprilPromotion = () => {
         </motion.div>
       </div>
 
-      <EarlyBirdDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EarlyBirdDialog open={dialogOpen} onOpenChange={setDialogOpen} initialData={initialData} />
     </section>
   );
 };

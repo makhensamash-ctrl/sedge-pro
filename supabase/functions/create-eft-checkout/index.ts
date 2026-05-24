@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       paymentPlan,
       planLabel,
       planPrice,
+      amount: reqAmount,
     } = await req.json();
 
     // Validate required fields
@@ -126,11 +127,19 @@ Deno.serve(async (req) => {
     // 4. Calculate amounts based on plan (no VAT)
     let amount: number;
     let description: string;
+
+    const parsedAmount = typeof reqAmount === "number" ? reqAmount : Number(reqAmount);
+    if (reqAmount !== undefined && reqAmount !== null && !isNaN(parsedAmount) && parsedAmount > 0) {
+      amount = parsedAmount;
+    } else if (paymentPlan === "once-off") {
+      amount = 5000;
+    } else {
+      amount = 700;
+    }
+
     if (paymentPlan === "once-off") {
-      amount = 20000;
       description = "Pre-Launch Promotion — Once-off Payment";
     } else {
-      amount = 3000;
       description = "Pre-Launch Promotion — Monthly Instalment (1 of 12)";
     }
 
