@@ -83,7 +83,7 @@ const HeroSection = () => {
 
               {/* View Pre-launch Promotion button */}
               <a
-                href="#prelaunch-promotion?promo=open"
+                href="#prelaunch-promotion"
                 onClick={(e) => {
                   e.preventDefault();
                   // Set hash — this triggers the hashchange listener in AprilPromotion
