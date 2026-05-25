@@ -369,6 +369,10 @@ const CRM = () => {
               <List className="w-4 h-4" />
             </Button>
           </div>
+          <Button size="sm" variant="outline" onClick={() => handleExportLeads()}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
           <Button size="sm" onClick={() => { setAddToStageId(sortedStages[0]?.id || ""); setEditingLead(null); setDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
             Add Lead
