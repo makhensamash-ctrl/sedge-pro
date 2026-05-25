@@ -146,6 +146,10 @@ Deno.serve(async (req) => {
     const taxAmount = 0;
     const totalAmount = amount;
 
+    const bankingText = businessProfile
+      ? `\n\nBANKING DETAILS:\nBank: ${businessProfile.bank_name}\nAccount Holder: ${businessProfile.account_holder_name}\nAccount Number: ${businessProfile.account_number}\nBranch Code: ${businessProfile.branch_code}\nReference: ${invoiceNumber}`
+      : "";
+
     // 5. Create invoice
     const dueDate = new Date(now);
     dueDate.setDate(dueDate.getDate() + 7);
@@ -164,7 +168,7 @@ Deno.serve(async (req) => {
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
         description,
-        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
+        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}${bankingText}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
         recurrence_count: 0,

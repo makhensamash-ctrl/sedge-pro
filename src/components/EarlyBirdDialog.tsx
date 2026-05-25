@@ -169,6 +169,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
         });
 
         if (error) throw error;
+         console.log(data);
 
         setBankDetails(data.bankDetails);
         setInvoiceNumber(data.invoiceNumber);

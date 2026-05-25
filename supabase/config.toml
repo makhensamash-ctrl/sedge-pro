@@ -1,4 +1,4 @@
-project_id = "rqsqoyseotzpvmoeaydl"
+project_id = "lnfyoytjfnlwxyxbfhkw"
 
 [functions.create-yoco-checkout]
 verify_jwt = false
