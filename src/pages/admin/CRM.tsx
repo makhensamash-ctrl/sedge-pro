@@ -457,6 +457,10 @@ const CRM = () => {
               Clear filters
             </Button>
           )}
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => handleExportLeads()}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
         </div>
 
         {viewMode === "kanban" ? (
