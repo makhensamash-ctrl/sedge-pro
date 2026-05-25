@@ -385,14 +385,14 @@ const CRM = () => {
   return (
     <div>
       <Tabs defaultValue="sales" className="w-full">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
           <div className="flex items-center gap-4">
             <TabsList>
               <TabsTrigger value="sales">Sales Pipeline</TabsTrigger>
               <TabsTrigger value="support">Support Pipeline</TabsTrigger>
             </TabsList>
           </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <div className="flex rounded-lg border border-border overflow-hidden">
             <Button
               variant={viewMode === "kanban" ? "default" : "ghost"}
