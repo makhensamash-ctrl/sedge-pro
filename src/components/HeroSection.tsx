@@ -84,11 +84,7 @@ const HeroSection = () => {
               {/* View Pre-launch Promotion button */}
               <a
                 href="#prelaunch-promotion"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Set hash — this triggers the hashchange listener in AprilPromotion
-                  window.location.hash = "prelaunch-promotion";
-                }}
+               
                 className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
                 {hero.cta_label}
