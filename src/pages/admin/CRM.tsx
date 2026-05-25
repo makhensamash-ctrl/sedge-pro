@@ -20,12 +20,107 @@ import LeadDetailDialog from "@/components/crm/LeadDetailDialog";
 import StageManager from "@/components/crm/StageManager";
 import LeadListView from "@/components/crm/LeadListView";
 import { toast } from "sonner";
-import { Plus, Search, X, LayoutGrid, List, Download } from "lucide-react";
+import { Plus, Search, X, LayoutGrid, List, Download, Upload, Loader2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+
+// Helper to convert array of objects to CSV string
+const convertToCSV = (data: any[], headers: string[]): string => {
+  let str = headers.join(',') + '\r\n';
+
+  for (let i = 0; i < data.length; i++) {
+    let line = '';
+    for (let j = 0; j < headers.length; j++) {
+      if (line !== '') line += ',';
+      
+      const head = headers[j];
+      let val = data[i][head];
+      if (val === undefined || val === null) {
+        val = '';
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
+      }
+      
+      let valStr = String(val);
+      if (valStr.includes('"') || valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r')) {
+        valStr = '"' + valStr.replace(/"/g, '""') + '"';
+      }
+      line += valStr;
+    }
+    str += line + '\r\n';
+  }
+  return str;
+};
+
+// Helper to trigger file download
+const downloadFile = (content: string, contentType: string, filename: string) => {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// A robust RFC 4180-compliant CSV parser
+const parseCSV = (text: string): string[][] => {
+  const lines: string[][] = [];
+  let row: string[] = [];
+  let inQuotes = false;
+  let currentValue = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentValue += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentValue += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        row.push(currentValue);
+        currentValue = '';
+      } else if (char === '\n' || char === '\r') {
+        row.push(currentValue);
+        currentValue = '';
+        if (row.some(val => val !== '') || char === '\n') {
+          lines.push(row);
+        }
+        row = [];
+        if (char === '\r' && nextChar === '\n') {
+          i++; // Skip LF if CRLF
+        }
+      } else {
+        currentValue += char;
+      }
+    }
+  }
+  
+  if (row.length > 0 || currentValue !== '') {
+    row.push(currentValue);
+    lines.push(row);
+  }
+  
+  return lines;
+};
 
 const CRM = () => {
   const { user } = useAuth();
@@ -46,6 +141,190 @@ const CRM = () => {
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const dragOriginalStageRef = useRef<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ leadId: string; originalStageId: string; targetStageId: string } | null>(null);
+
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
+  const handleExportCRMCSV = () => {
+    try {
+      if (leads.length === 0) {
+        toast.error("No CRM leads found to export.");
+        return;
+      }
+
+      const dataToExport = leads.map((l) => {
+        const stage = stages.find((s) => s.id === l.stage_id)?.name || "New Lead";
+        return {
+          client_name: l.client_name,
+          phone: l.phone || "",
+          email: l.email || "",
+          source: l.source || "",
+          stage_name: stage,
+          position: l.position,
+          notes: l.notes || "",
+          package: l.package || "",
+          generated_by: l.generated_by || "",
+        };
+      });
+
+      const csvContent = convertToCSV(dataToExport, [
+        "client_name",
+        "phone",
+        "email",
+        "source",
+        "stage_name",
+        "position",
+        "notes",
+        "package",
+        "generated_by"
+      ]);
+
+      downloadFile(csvContent, "text/csv;charset=utf-8;", "crm_leads_export.csv");
+      toast.success("CRM leads exported successfully.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to export CRM leads.");
+    }
+  };
+
+  const handleImportCRMCSV = async () => {
+    if (!importFile) return;
+
+    if (!importFile.name.endsWith(".csv")) {
+      toast.error("Please select a valid CSV file.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to import these CRM leads?")) {
+      return;
+    }
+
+    setImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const rows = parseCSV(text);
+
+        if (rows.length < 2) {
+          throw new Error("CSV file is empty or missing data.");
+        }
+
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        const nameIdx = headers.indexOf("client_name");
+        const phoneIdx = headers.indexOf("phone");
+        const emailIdx = headers.indexOf("email");
+        const srcIdx = headers.indexOf("source");
+        const stageIdx = headers.indexOf("stage_name");
+        const posIdx = headers.indexOf("position");
+        const notesIdx = headers.indexOf("notes");
+        const pkgIdx = headers.indexOf("package");
+        const genIdx = headers.indexOf("generated_by");
+
+        if (nameIdx === -1) {
+          throw new Error("CSV is missing required 'client_name' column.");
+        }
+
+        const leadsToImport: any[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.length === 0 || (row.length === 1 && row[0] === "")) continue;
+
+          const clientName = row[nameIdx]?.trim();
+          if (!clientName) continue;
+
+          leadsToImport.push({
+            client_name: clientName,
+            phone: phoneIdx !== -1 ? row[phoneIdx]?.trim() || null : null,
+            email: emailIdx !== -1 ? row[emailIdx]?.trim() || null : null,
+            source: srcIdx !== -1 ? row[srcIdx]?.trim() || null : null,
+            stage_name: stageIdx !== -1 ? row[stageIdx]?.trim() || "New Lead" : "New Lead",
+            position: posIdx !== -1 ? parseInt(row[posIdx]) || 0 : 0,
+            notes: notesIdx !== -1 ? row[notesIdx]?.trim() || null : null,
+            package: pkgIdx !== -1 ? (row[pkgIdx]?.trim() === "none" || !row[pkgIdx]?.trim() ? null : row[pkgIdx]?.trim()) : null,
+            generated_by: genIdx !== -1 ? row[genIdx]?.trim() || null : null,
+          });
+        }
+
+        if (leadsToImport.length === 0) {
+          throw new Error("No valid lead records found in the CSV.");
+        }
+
+        setImportProgress({ current: 0, total: leadsToImport.length });
+
+        const { data: currentStages } = await supabase.from("pipeline_stages").select("id, name");
+        const stageMap = new Map<string, string>();
+        currentStages?.forEach((s) => stageMap.set(s.name.toLowerCase().trim(), s.id));
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < leadsToImport.length; i++) {
+          const lead = leadsToImport[i];
+          try {
+            const stageNameClean = lead.stage_name.trim();
+            const stageKey = stageNameClean.toLowerCase();
+            let targetStageId = stageMap.get(stageKey);
+
+            if (!targetStageId) {
+              const { data: allStages } = await supabase.from("pipeline_stages").select("position");
+              const maxPos = allStages?.reduce((m, s) => Math.max(m, s.position), -1) ?? -1;
+              const { data: newStage, error: stageErr } = await supabase
+                .from("pipeline_stages")
+                .insert({
+                  name: stageNameClean,
+                  color: "#6B7280",
+                  position: maxPos + 1,
+                })
+                .select()
+                .single();
+
+              if (stageErr) throw stageErr;
+              targetStageId = newStage.id;
+              stageMap.set(stageKey, targetStageId);
+            }
+
+            const { error: leadErr } = await supabase.from("leads").insert({
+              client_name: lead.client_name,
+              phone: lead.phone,
+              email: lead.email,
+              source: lead.source,
+              stage_id: targetStageId,
+              position: lead.position,
+              notes: lead.notes,
+              package: lead.package,
+              generated_by: lead.generated_by,
+              created_by: user?.id,
+            });
+
+            if (leadErr) throw leadErr;
+            successCount++;
+          } catch (err: any) {
+            console.error(`Failed to import lead ${lead.client_name}:`, err);
+            failCount++;
+          }
+          setImportProgress(prev => ({ ...prev, current: i + 1 }));
+        }
+
+        toast.success(`Import complete! Successfully created ${successCount} lead(s). Failed: ${failCount}`);
+        fetchLeads();
+        fetchStages();
+        setImportFile(null);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to import CSV.");
+      } finally {
+        setImporting(false);
+      }
+    };
+
+    reader.onerror = () => {
+      toast.error("Failed to read the selected file.");
+      setImporting(false);
+    };
+
+    reader.readAsText(importFile);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -390,6 +669,7 @@ const CRM = () => {
             <TabsList>
               <TabsTrigger value="sales">Sales Pipeline</TabsTrigger>
               <TabsTrigger value="support">Support Pipeline</TabsTrigger>
+              <TabsTrigger value="transfer">Export/Import</TabsTrigger>
             </TabsList>
           </div>
         <div className="flex gap-2 flex-wrap">
@@ -411,10 +691,10 @@ const CRM = () => {
               <List className="w-4 h-4" />
             </Button>
           </div>
-          <Button size="sm" variant="outline" onClick={() => handleExportLeads()}>
+          {/* <Button size="sm" variant="outline" onClick={() => handleExportLeads()}>
             <Download className="w-4 h-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
           <Button size="sm" onClick={() => { setAddToStageId(sortedStages[0]?.id || ""); setEditingLead(null); setDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
             Add Lead
@@ -457,10 +737,10 @@ const CRM = () => {
               Clear filters
             </Button>
           )}
-          <Button size="sm" variant="outline" className="ml-auto" onClick={() => handleExportLeads()}>
+          {/* <Button size="sm" variant="outline" className="ml-auto" onClick={() => handleExportLeads()}>
             <Download className="w-4 h-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
         </div>
 
         {viewMode === "kanban" ? (
@@ -518,6 +798,103 @@ const CRM = () => {
           <p className="text-muted-foreground max-w-md">
             The support pipeline is coming soon. You'll be able to track and manage support tickets here.
           </p>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="transfer" className="mt-0 space-y-6">
+        <div className="grid md:grid-cols-2 gap-6 pt-4">
+          {/* Export Card */}
+          <Card className="border border-border/80 shadow-md bg-card/50 backdrop-blur-sm transition-all hover:shadow-lg">
+            <CardHeader className="pb-3 border-b border-border/10 bg-gradient-to-r from-accent/5 to-transparent">
+              <CardTitle className="flex items-center gap-2.5 text-lg font-bold">
+                <Download className="w-5 h-5 text-accent animate-pulse" />
+                <span>Export CRM Leads</span>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Download your entire sales pipeline and lead records as a clean CSV file.
+              </p>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="p-4 rounded-lg bg-muted/30 border border-muted/50 transition-all hover:bg-muted/40">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  Sales Pipeline CSV
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Export client names, contact details, lead sources, notes, linked packages, stage names, and display positions. Stage names are exported instead of database UUIDs for easy importing to other projects.
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="w-full mt-4 text-xs hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400 dark:hover:border-emerald-900" 
+                  onClick={handleExportCRMCSV}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Export CSV
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Import Card */}
+          <Card className="border border-border/80 shadow-md bg-card/50 backdrop-blur-sm transition-all hover:shadow-lg">
+            <CardHeader className="pb-3 border-b border-border/10 bg-gradient-to-r from-amber/5 to-transparent">
+              <CardTitle className="flex items-center gap-2.5 text-lg font-bold">
+                <Upload className="w-5 h-5 text-amber-500" />
+                <span>Import CRM Leads</span>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload exported CRM CSV files to quickly load your pipeline leads and stages.
+              </p>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-5">
+              <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <h4 className="text-xs font-semibold">Important Safety Warning</h4>
+                  <p className="text-[10px] mt-1 leading-relaxed opacity-90">
+                    Importing leads will automatically create missing pipeline stages locally based on their stage names. Imported leads are created under fresh IDs to prevent conflicts. Make sure to back up your current pipeline before proceeding.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/20 border border-muted-foreground/10 space-y-3">
+                  <Label className="text-xs font-semibold flex items-center justify-between">
+                    <span>Import leads CSV</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Accepts .csv</span>
+                  </Label>
+                  <div className="flex gap-2 items-center">
+                    <Input 
+                      type="file" 
+                      accept=".csv"
+                      className="text-xs h-9 bg-background/50 cursor-pointer file:text-xs file:font-medium file:text-muted-foreground"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      disabled={!importFile || importing}
+                      onClick={handleImportCRMCSV}
+                      className="h-9 px-4 text-xs font-medium"
+                    >
+                      {importing ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                          Importing ({importProgress.current} / {importProgress.total})
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          Import
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 

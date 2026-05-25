@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ICON_NAMES, getIcon } from "@/lib/iconMap";
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Upload, FileJson, FileSpreadsheet, AlertTriangle } from "lucide-react";
 
 type SiteCard = {
   id: string;
@@ -234,6 +234,100 @@ const CardsManager = ({
   );
 };
 
+// Helper to convert array of objects to CSV string
+const convertToCSV = (data: any[], headers: string[]): string => {
+  let str = headers.join(',') + '\r\n';
+
+  for (let i = 0; i < data.length; i++) {
+    let line = '';
+    for (let j = 0; j < headers.length; j++) {
+      if (line !== '') line += ',';
+      
+      const head = headers[j];
+      let val = data[i][head];
+      if (val === undefined || val === null) {
+        val = '';
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
+      }
+      
+      // Escape double quotes and wrap in quotes if contains comma, quote, or newline
+      let valStr = String(val);
+      if (valStr.includes('"') || valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r')) {
+        valStr = '"' + valStr.replace(/"/g, '""') + '"';
+      }
+      line += valStr;
+    }
+    str += line + '\r\n';
+  }
+  return str;
+};
+
+// Helper to trigger file download
+const downloadFile = (content: string, contentType: string, filename: string) => {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// A robust RFC 4180-compliant CSV parser
+const parseCSV = (text: string): string[][] => {
+  const lines: string[][] = [];
+  let row: string[] = [];
+  let inQuotes = false;
+  let currentValue = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentValue += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentValue += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        row.push(currentValue);
+        currentValue = '';
+      } else if (char === '\n' || char === '\r') {
+        row.push(currentValue);
+        currentValue = '';
+        if (row.some(val => val !== '') || char === '\n') {
+          lines.push(row);
+        }
+        row = [];
+        if (char === '\r' && nextChar === '\n') {
+          i++; // Skip LF if CRLF
+        }
+      } else {
+        currentValue += char;
+      }
+    }
+  }
+  
+  if (row.length > 0 || currentValue !== '') {
+    row.push(currentValue);
+    lines.push(row);
+  }
+  
+  return lines;
+};
+
 const ContentManager = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState<SettingMap>({});
@@ -241,6 +335,280 @@ const ContentManager = () => {
   const [cards, setCards] = useState<SiteCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+
+  const [importingSettings, setImportingSettings] = useState(false);
+  const [importingCards, setImportingCards] = useState(false);
+  const [settingsFile, setSettingsFile] = useState<File | null>(null);
+  const [cardsFile, setCardsFile] = useState<File | null>(null);
+
+  const handleExportSettingsCSV = async () => {
+    try {
+      const { data, error } = await supabase.from("site_settings").select("key, value");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({ title: "No Data", description: "No site settings found to export." });
+        return;
+      }
+      const csvContent = convertToCSV(data, ["key", "value"]);
+      downloadFile(csvContent, "text/csv;charset=utf-8;", "site_settings_export.csv");
+      toast({ title: "Export Success", description: "Site settings CSV downloaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Export Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleExportSettingsJSON = async () => {
+    try {
+      const { data, error } = await supabase.from("site_settings").select("key, value");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({ title: "No Data", description: "No site settings found to export." });
+        return;
+      }
+      const jsonContent = JSON.stringify(data, null, 2);
+      downloadFile(jsonContent, "application/json;charset=utf-8;", "site_settings_export.json");
+      toast({ title: "Export Success", description: "Site settings JSON downloaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Export Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleExportCardsCSV = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("site_cards")
+        .select("section, title, description, icon, position")
+        .order("section")
+        .order("position");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({ title: "No Data", description: "No site cards found to export." });
+        return;
+      }
+      const csvContent = convertToCSV(data, ["section", "title", "description", "icon", "position"]);
+      downloadFile(csvContent, "text/csv;charset=utf-8;", "site_cards_export.csv");
+      toast({ title: "Export Success", description: "Site cards CSV downloaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Export Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleExportCardsJSON = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("site_cards")
+        .select("section, title, description, icon, position")
+        .order("section")
+        .order("position");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({ title: "No Data", description: "No site cards found to export." });
+        return;
+      }
+      const jsonContent = JSON.stringify(data, null, 2);
+      downloadFile(jsonContent, "application/json;charset=utf-8;", "site_cards_export.json");
+      toast({ title: "Export Success", description: "Site cards JSON downloaded successfully." });
+    } catch (err: any) {
+      toast({ title: "Export Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleImportSettings = async () => {
+    if (!settingsFile) return;
+    
+    const isJson = settingsFile.name.endsWith(".json");
+    const isCsv = settingsFile.name.endsWith(".csv");
+    
+    if (!isJson && !isCsv) {
+      toast({ title: "Invalid File", description: "Please upload a valid .csv or .json file.", variant: "destructive" });
+      return;
+    }
+
+    if (!confirm("Are you sure you want to import these settings? This will overwrite existing keys with the new data.")) {
+      return;
+    }
+
+    setImportingSettings(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        let items: { key: string; value: any }[] = [];
+
+        if (isJson) {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            const isValid = parsed.every(item => item && typeof item === "object" && "key" in item && "value" in item);
+            if (!isValid) throw new Error("JSON must be an array of objects containing 'key' and 'value' fields.");
+            items = parsed.map(item => ({ key: item.key, value: item.value }));
+          } else if (typeof parsed === "object" && parsed !== null) {
+            items = Object.entries(parsed).map(([key, value]) => ({ key, value }));
+          } else {
+            throw new Error("Invalid JSON structure. Must be an array of settings or key-value dictionary.");
+          }
+        } else {
+          const rows = parseCSV(text);
+          if (rows.length < 2) throw new Error("CSV file is empty or missing data.");
+          
+          const headers = rows[0].map(h => h.trim().toLowerCase());
+          const keyIdx = headers.indexOf("key");
+          const valIdx = headers.indexOf("value");
+
+          if (keyIdx === -1 || valIdx === -1) {
+            throw new Error("CSV is missing required headers: 'key' and 'value'.");
+          }
+
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length === 0 || (row.length === 1 && row[0] === "")) continue;
+            
+            const key = row[keyIdx]?.trim();
+            const valueStr = row[valIdx]?.trim();
+
+            if (!key) continue;
+
+            let valueObj: any;
+            try {
+              valueObj = JSON.parse(valueStr);
+            } catch {
+              valueObj = valueStr;
+            }
+            items.push({ key, value: valueObj });
+          }
+        }
+
+        if (items.length === 0) {
+          throw new Error("No settings records found in the uploaded file.");
+        }
+
+        const { error } = await supabase.from("site_settings").upsert(items, { onConflict: "key" });
+        if (error) throw error;
+
+        toast({ title: "Import Success", description: `Successfully imported ${items.length} site settings records.` });
+        loadAll();
+      } catch (err: any) {
+        toast({ title: "Import Failed", description: err.message, variant: "destructive" });
+      } finally {
+        setImportingSettings(false);
+        setSettingsFile(null);
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (input) input.value = "";
+      }
+    };
+
+    reader.onerror = () => {
+      toast({ title: "Error Reading File", description: "Failed to read the uploaded file.", variant: "destructive" });
+      setImportingSettings(false);
+    };
+
+    reader.readAsText(settingsFile);
+  };
+
+  const handleImportCards = async () => {
+    if (!cardsFile) return;
+
+    const isJson = cardsFile.name.endsWith(".json");
+    const isCsv = cardsFile.name.endsWith(".csv");
+
+    if (!isJson && !isCsv) {
+      toast({ title: "Invalid File", description: "Please upload a valid .csv or .json file.", variant: "destructive" });
+      return;
+    }
+
+    if (!confirm("Are you sure you want to import these cards? This will delete all existing cards in the sections being imported and replace them with the new data.")) {
+      return;
+    }
+
+    setImportingCards(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        let items: { section: string; title: string; description: string; icon: string; position: number }[] = [];
+
+        if (isJson) {
+          const parsed = JSON.parse(text);
+          if (!Array.isArray(parsed)) throw new Error("JSON file must be an array of card records.");
+          
+          const isValid = parsed.every(
+            item => item && typeof item === "object" && "section" in item && "title" in item
+          );
+          if (!isValid) throw new Error("JSON cards must contain at least 'section' and 'title' fields.");
+
+          items = parsed.map(item => ({
+            section: String(item.section),
+            title: String(item.title),
+            description: String(item.description || ""),
+            icon: String(item.icon || "Sparkles"),
+            position: Number(item.position ?? 0)
+          }));
+        } else {
+          const rows = parseCSV(text);
+          if (rows.length < 2) throw new Error("CSV file is empty or missing data.");
+
+          const headers = rows[0].map(h => h.trim().toLowerCase());
+          const secIdx = headers.indexOf("section");
+          const titleIdx = headers.indexOf("title");
+          const descIdx = headers.indexOf("description");
+          const iconIdx = headers.indexOf("icon");
+          const posIdx = headers.indexOf("position");
+
+          if (secIdx === -1 || titleIdx === -1) {
+            throw new Error("CSV is missing required columns: 'section' and 'title'.");
+          }
+
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length === 0 || (row.length === 1 && row[0] === "")) continue;
+
+            const section = row[secIdx]?.trim();
+            const title = row[titleIdx]?.trim();
+            
+            if (!section || !title) continue;
+
+            const description = descIdx !== -1 ? row[descIdx]?.trim() : "";
+            const icon = iconIdx !== -1 ? row[iconIdx]?.trim() : "Sparkles";
+            const position = posIdx !== -1 ? parseInt(row[posIdx]) || 0 : 0;
+
+            items.push({ section, title, description, icon, position });
+          }
+        }
+
+        if (items.length === 0) {
+          throw new Error("No cards records found in the uploaded file.");
+        }
+
+        const sections = Array.from(new Set(items.map(item => item.section)));
+
+        for (const section of sections) {
+          const { error: delError } = await supabase.from("site_cards").delete().eq("section", section);
+          if (delError) throw delError;
+        }
+
+        const { error: insError } = await supabase.from("site_cards").insert(items);
+        if (insError) throw insError;
+
+        toast({ title: "Import Success", description: `Successfully imported ${items.length} cards across ${sections.length} sections.` });
+        loadAll();
+      } catch (err: any) {
+        toast({ title: "Import Failed", description: err.message, variant: "destructive" });
+      } finally {
+        setImportingCards(false);
+        setCardsFile(null);
+        const inputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+        inputs.forEach(input => input.value = "");
+      }
+    };
+
+    reader.onerror = () => {
+      toast({ title: "Error Reading File", description: "Failed to read the uploaded file.", variant: "destructive" });
+      setImportingCards(false);
+    };
+
+    reader.readAsText(cardsFile);
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -349,6 +717,7 @@ const ContentManager = () => {
           <TabsTrigger value="prelaunch">Pre-launch</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="videos">Videos</TabsTrigger>
+          <TabsTrigger value="transfer">Export/Import</TabsTrigger>
         </TabsList>
 
         <TabsContent value="hero" className="mt-4">
@@ -481,6 +850,172 @@ const ContentManager = () => {
             Paste only the video ID (the part after <code>v=</code> in the YouTube URL). Videos open in a popup on the
             site so visitors never leave.
           </p>
+        </TabsContent>
+
+        <TabsContent value="transfer" className="mt-4 space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Export Card */}
+            <Card className="border border-border/80 shadow-md bg-card/50 backdrop-blur-sm transition-all hover:shadow-lg">
+              <CardHeader className="pb-3 border-b border-border/10 bg-gradient-to-r from-accent/5 to-transparent">
+                <CardTitle className="flex items-center gap-2.5 text-lg font-bold">
+                  <Download className="w-5 h-5 text-accent animate-pulse" />
+                  <span>Export Site Content</span>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Download your landing page content for backup or transfer to another Supabase project.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-muted/30 border border-muted/50 transition-all hover:bg-muted/40">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                      Site Settings
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                      Hero text, subtitles, CTA buttons, pricing descriptions, contact info, and YouTube video IDs.
+                    </p>
+                    <div className="flex gap-2.5 mt-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-xs hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400 dark:hover:border-emerald-900" 
+                        onClick={handleExportSettingsCSV}
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        Export CSV
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950/20 dark:hover:text-blue-400 dark:hover:border-blue-900" 
+                        onClick={handleExportSettingsJSON}
+                      >
+                        <FileJson className="w-3.5 h-3.5 mr-1.5 text-blue-500" />
+                        Export JSON
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-muted/30 border border-muted/50 transition-all hover:bg-muted/40">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                      Site Cards
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                      "About" cards and "How It Works" steps (titles, descriptions, icons, and display order).
+                    </p>
+                    <div className="flex gap-2.5 mt-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-xs hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400 dark:hover:border-emerald-900" 
+                        onClick={handleExportCardsCSV}
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        Export CSV
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950/20 dark:hover:text-blue-400 dark:hover:border-blue-900" 
+                        onClick={handleExportCardsJSON}
+                      >
+                        <FileJson className="w-3.5 h-3.5 mr-1.5 text-blue-500" />
+                        Export JSON
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Import Card */}
+            <Card className="border border-border/80 shadow-md bg-card/50 backdrop-blur-sm transition-all hover:shadow-lg">
+              <CardHeader className="pb-3 border-b border-border/10 bg-gradient-to-r from-amber/5 to-transparent">
+                <CardTitle className="flex items-center gap-2.5 text-lg font-bold">
+                  <Upload className="w-5 h-5 text-amber-500" />
+                  <span>Import Site Content</span>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload exported CSV or JSON files to quickly restore or transfer landing page content.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-5">
+                <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <h4 className="text-xs font-semibold">Important Safety Warning</h4>
+                    <p className="text-[10px] mt-1 leading-relaxed opacity-90">
+                      Importing site settings will overwrite matching keys. Importing site cards will clear and replace existing items in the section. Make sure to back up your database before continuing.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Import Settings */}
+                  <div className="p-4 rounded-lg bg-muted/20 border border-muted-foreground/10 space-y-3">
+                    <Label className="text-xs font-semibold flex items-center justify-between">
+                      <span>Import Site Settings</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Accepts .csv or .json</span>
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <Input 
+                        type="file" 
+                        accept=".csv,.json"
+                        className="text-xs h-9 bg-background/50 cursor-pointer file:text-xs file:font-medium file:text-muted-foreground"
+                        onChange={(e) => setSettingsFile(e.target.files?.[0] || null)}
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        disabled={!settingsFile || importingSettings}
+                        onClick={handleImportSettings}
+                        className="h-9 px-4 text-xs font-medium"
+                      >
+                        {importingSettings ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Import Cards */}
+                  <div className="p-4 rounded-lg bg-muted/20 border border-muted-foreground/10 space-y-3">
+                    <Label className="text-xs font-semibold flex items-center justify-between">
+                      <span>Import Site Cards</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">Accepts .csv or .json</span>
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <Input 
+                        type="file" 
+                        accept=".csv,.json"
+                        className="text-xs h-9 bg-background/50 cursor-pointer file:text-xs file:font-medium file:text-muted-foreground"
+                        onChange={(e) => setCardsFile(e.target.files?.[0] || null)}
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        disabled={!cardsFile || importingCards}
+                        onClick={handleImportCards}
+                        className="h-9 px-4 text-xs font-medium"
+                      >
+                        {importingCards ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

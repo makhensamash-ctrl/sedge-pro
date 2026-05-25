@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { UserPlus, KeyRound, RotateCcw, Pencil, Plus, Trash2 } from "lucide-react";
+import { UserPlus, KeyRound, RotateCcw, Pencil, Plus, Trash2, Download, Upload, Loader2, AlertTriangle } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -37,8 +37,102 @@ interface AdminProfile {
   email: string;
 }
 
+// Helper to convert array of objects to CSV string
+const convertToCSV = (data: any[], headers: string[]): string => {
+  let str = headers.join(',') + '\r\n';
+
+  for (let i = 0; i < data.length; i++) {
+    let line = '';
+    for (let j = 0; j < headers.length; j++) {
+      if (line !== '') line += ',';
+      
+      const head = headers[j];
+      let val = data[i][head];
+      if (val === undefined || val === null) {
+        val = '';
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
+      }
+      
+      let valStr = String(val);
+      if (valStr.includes('"') || valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r')) {
+        valStr = '"' + valStr.replace(/"/g, '""') + '"';
+      }
+      line += valStr;
+    }
+    str += line + '\r\n';
+  }
+  return str;
+};
+
+// Helper to trigger file download
+const downloadFile = (content: string, contentType: string, filename: string) => {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// A robust RFC 4180-compliant CSV parser
+const parseCSV = (text: string): string[][] => {
+  const lines: string[][] = [];
+  let row: string[] = [];
+  let inQuotes = false;
+  let currentValue = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentValue += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentValue += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        row.push(currentValue);
+        currentValue = '';
+      } else if (char === '\n' || char === '\r') {
+        row.push(currentValue);
+        currentValue = '';
+        if (row.some(val => val !== '') || char === '\n') {
+          lines.push(row);
+        }
+        row = [];
+        if (char === '\r' && nextChar === '\n') {
+          i++; // Skip LF if CRLF
+        }
+      } else {
+        currentValue += char;
+      }
+    }
+  }
+  
+  if (row.length > 0 || currentValue !== '') {
+    row.push(currentValue);
+    lines.push(row);
+  }
+  
+  return lines;
+};
+
 const UsersManagement = () => {
-  const { isSuperAdmin } = useAuth();
+  const { isAdmin } = useAuth();
+  const isSuperAdmin = isAdmin;
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -54,6 +148,124 @@ const UsersManagement = () => {
   const [editNameUser, setEditNameUser] = useState<AdminUser | null>(null);
   const [editNameValue, setEditNameValue] = useState("");
   const [savingName, setSavingName] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
+  const handleExportUsersCSV = () => {
+    try {
+      if (users.length === 0) {
+        toast.error("No users found to export.");
+        return;
+      }
+      
+      const dataToExport = users.map((u) => ({
+        full_name: u.full_name || "",
+        email: u.email,
+        role: u.role,
+        created_at: u.created_at,
+      }));
+      
+      const csvContent = convertToCSV(dataToExport, ["full_name", "email", "role", "created_at"]);
+      downloadFile(csvContent, "text/csv;charset=utf-8;", "sedge_pro_users.csv");
+      toast.success("Users CSV downloaded successfully.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to export users.");
+    }
+  };
+
+  const handleImportCSV = async () => {
+    if (!importFile) return;
+
+    if (!importFile.name.endsWith(".csv")) {
+      toast.error("Please select a valid CSV file.");
+      return;
+    }
+
+    setImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const rows = parseCSV(text);
+        
+        if (rows.length < 2) {
+          throw new Error("CSV file is empty or missing data.");
+        }
+
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        const emailIdx = headers.indexOf("email");
+        let nameIdx = headers.indexOf("full_name");
+        if (nameIdx === -1) nameIdx = headers.indexOf("fullname");
+        if (nameIdx === -1) nameIdx = headers.indexOf("name");
+
+        if (emailIdx === -1) {
+          throw new Error("CSV is missing required 'email' column.");
+        }
+
+        const usersToImport: { email: string; fullName: string }[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.length === 0 || (row.length === 1 && row[0] === "")) continue;
+
+          const email = row[emailIdx]?.trim();
+          if (!email) continue;
+
+          const fullName = nameIdx !== -1 ? row[nameIdx]?.trim() || "" : "";
+          usersToImport.push({ email, fullName });
+        }
+
+        if (usersToImport.length === 0) {
+          throw new Error("No valid user records found in the CSV.");
+        }
+
+        setImportProgress({ current: 0, total: usersToImport.length });
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < usersToImport.length; i++) {
+          const user = usersToImport[i];
+          try {
+            const { data, error } = await supabase.functions.invoke("invite-admin", {
+              body: {
+                email: user.email,
+                fullName: user.fullName,
+                password: "SergePro@987"
+              }
+            });
+
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+
+            successCount++;
+          } catch (err: any) {
+            console.error(`Failed to import user ${user.email}:`, err);
+            failCount++;
+          }
+          setImportProgress(prev => ({ ...prev, current: i + 1 }));
+        }
+
+        toast.success(`Import complete! Successfully created ${successCount} user(s). Failed: ${failCount}`);
+        fetchUsers();
+        setImportOpen(false);
+        setImportFile(null);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to import CSV.");
+      } finally {
+        setImporting(false);
+      }
+    };
+
+    reader.onerror = () => {
+      toast.error("Failed to read the selected file.");
+      setImporting(false);
+    };
+
+    reader.readAsText(importFile);
+  };
 
   // Salesperson state
   const [salespersons, setSalespersons] = useState<Salesperson[]>([]);
@@ -141,21 +353,6 @@ const UsersManagement = () => {
     }
   };
 
-  const handleResetAll = async () => {
-    if (!confirm("Reset ALL admin passwords to the default? Each user will be prompted to change their password on next login.")) return;
-    setResettingAll(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("invite-admin", { body: { action: "reset-all-passwords" } });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success(`Passwords reset for ${data.updated} user(s). They will be prompted to change on next login.`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to reset passwords");
-    } finally {
-      setResettingAll(false);
-    }
-  };
-
   const handleEditName = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editNameUser) return;
@@ -208,7 +405,60 @@ const UsersManagement = () => {
 
   return (
     <div>
+      <div className="flex justify-between">
       <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">User Management</h2>
+          <div className="flex gap-2">
+      
+              <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) setImportFile(null); }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline"><Upload className="w-4 h-4 mr-2" />Import CSV</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle className="flex items-center gap-2 font-bold"><Upload className="w-5 h-5 text-amber-500" />Import Users</DialogTitle></DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                      <p className="text-xs leading-relaxed font-medium">
+                        CSV must have <strong>email</strong> and optional <strong>full_name</strong> (or <strong>name</strong>) columns. Imported users will be created with default credentials (password <code>SergePro@987</code>) and welcome notifications will be sent automatically.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold">Select CSV File</Label>
+                      <Input 
+                        type="file" 
+                        accept=".csv"
+                        className="cursor-pointer file:text-xs file:font-medium text-xs bg-background/50 h-9"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full text-xs font-semibold h-9" 
+                      disabled={!importFile || importing} 
+                      onClick={handleImportCSV}
+                    >
+                      {importing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Importing Users ({importProgress.current} / {importProgress.total})...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Import Users
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button variant="outline" onClick={handleExportUsersCSV}>
+                <Download className="w-4 h-4 mr-2" />Export CSV
+              </Button>
+              </div>
+
+
+      </div>
 
       <Tabs defaultValue="admins" className="w-full">
         <TabsList className="mb-4">
@@ -233,9 +483,8 @@ const UsersManagement = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-              <Button variant="outline" onClick={handleResetAll} disabled={resettingAll}>
-                <RotateCcw className="w-4 h-4 mr-2" />{resettingAll ? "Resetting..." : "Reset All Passwords"}
-              </Button>
+
+    
             </div>
           )}
 
@@ -248,12 +497,11 @@ const UsersManagement = () => {
                   <TableHead>Role</TableHead>
                   {isSuperAdmin && <TableHead className="text-center">2FA</TableHead>}
                   <TableHead>Joined</TableHead>
-                  {isSuperAdmin && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={isSuperAdmin ? 6 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isSuperAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : users.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
@@ -265,18 +513,6 @@ const UsersManagement = () => {
                       </TableCell>
                     )}
                     <TableCell className="text-sm">{new Date(u.created_at).toLocaleDateString()}</TableCell>
-                    {isSuperAdmin && (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => { setEditNameUser(u); setEditNameValue(u.full_name || ""); setEditNameOpen(true); }}>
-                            <Pencil className="w-4 h-4 mr-1" />Edit Name
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedUser(u); setPasswordOpen(true); }}>
-                            <KeyRound className="w-4 h-4 mr-1" />Reset Password
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
                   </TableRow>
                 ))}
               </TableBody>
