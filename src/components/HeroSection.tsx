@@ -90,10 +90,10 @@ const HeroSection = () => {
                 {hero.cta_label}
               </a>
                 <a
-                href="#demo-form"
+                href="#pricing"
                  className="border border-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
-                {'Access Demo'}
+                {'Access Complimentary Packages'}
                 <ArrowRight className="w-3.5 h-3.5" />
               </a> 
             </div>

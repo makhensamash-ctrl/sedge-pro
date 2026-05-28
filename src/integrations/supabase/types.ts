@@ -598,6 +598,92 @@ export type Database = {
         }
         Relationships: []
       }
+      package_pricing_tiers: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          package_id: string
+          position: number
+          price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          package_id: string
+          position?: number
+          price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          package_id?: string
+          position?: number
+          price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_pricing_tiers_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          applicable_package_ids: string[] | null
+          code: string | null
+          created_at: string
+          discount_type: string
+          discount_value: number
+          end_date: string | null
+          id: string
+          is_active: boolean
+          name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_package_ids?: string[] | null
+          code?: string | null
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_package_ids?: string[] | null
+          code?: string | null
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount_cents: number

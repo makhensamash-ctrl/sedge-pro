@@ -9,7 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ICON_NAMES, getIcon } from "@/lib/iconMap";
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Upload, FileJson, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Upload, FileJson, FileSpreadsheet, AlertTriangle, Pencil } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type SiteCard = {
   id: string;
@@ -21,6 +25,337 @@ type SiteCard = {
 };
 
 type SettingMap = Record<string, any>;
+
+interface ServiceData {
+  description: string;
+  features: string[];
+  is_active: boolean;
+}
+
+const parseServiceDescription = (raw: string): ServiceData => {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      return {
+        description: parsed.description || "",
+        features: Array.isArray(parsed.features) ? parsed.features : [],
+        is_active: typeof parsed.is_active === "boolean" ? parsed.is_active : true,
+      };
+    }
+  } catch (e) {
+    // Fail silently, fallback to standard text
+  }
+  return {
+    description: raw || "",
+    features: [],
+    is_active: true,
+  };
+};
+
+const serializeServiceDescription = (description: string, features: string[], is_active: boolean): string => {
+  return JSON.stringify({
+    description,
+    features,
+    is_active,
+  });
+};
+
+const ServicesManager = ({
+  cards,
+  onReload,
+}: {
+  cards: SiteCard[];
+  onReload: () => void;
+}) => {
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<SiteCard | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [icon, setIcon] = useState("Sparkles");
+  const [description, setDescription] = useState("");
+  const [featuresText, setFeaturesText] = useState("");
+  const [isActive, setIsActive] = useState(true);
+
+  const openAdd = () => {
+    setEditing(null);
+    setTitle("");
+    setIcon("None");
+    setDescription("");
+    setFeaturesText("");
+    setIsActive(true);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (card: SiteCard) => {
+    setEditing(card);
+    setTitle(card.title);
+    setIcon(card.icon);
+    
+    const parsed = parseServiceDescription(card.description);
+    setDescription(parsed.description);
+    setFeaturesText(parsed.features.join("\n"));
+    setIsActive(parsed.is_active);
+    
+    setDialogOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+
+    const features = featuresText
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    const serializedDesc = serializeServiceDescription(
+      description.trim(),
+      features,
+      isActive
+    );
+
+    if (editing) {
+      const { error } = await supabase
+        .from("site_cards")
+        .update({
+          title: title.trim(),
+          icon,
+          description: serializedDesc,
+        })
+        .eq("id", editing.id);
+
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Service updated" });
+      }
+    } else {
+      const maxPos = cards.reduce((max, c) => Math.max(max, c.position), -1);
+      const { error } = await supabase.from("site_cards").insert({
+        section: "services",
+        title: title.trim(),
+        icon,
+        description: serializedDesc,
+        position: maxPos + 1,
+      });
+
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Service added" });
+      }
+    }
+
+    setSaving(false);
+    setDialogOpen(false);
+    onReload();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this service?")) return;
+    const { error } = await supabase.from("site_cards").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Service deleted" });
+      onReload();
+    }
+  };
+
+  const toggleActive = async (card: SiteCard) => {
+    const parsed = parseServiceDescription(card.description);
+    const serializedDesc = serializeServiceDescription(
+      parsed.description,
+      parsed.features,
+      !parsed.is_active
+    );
+
+    const { error } = await supabase
+      .from("site_cards")
+      .update({ description: serializedDesc })
+      .eq("id", card.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      onReload();
+    }
+  };
+
+  const move = async (id: string, dir: -1 | 1) => {
+    const sorted = [...cards].sort((a, b) => a.position - b.position);
+    const idx = sorted.findIndex((c) => c.id === id);
+    const swap = sorted[idx + dir];
+    if (!swap) return;
+    const a = sorted[idx];
+    await supabase.from("site_cards").update({ position: swap.position }).eq("id", a.id);
+    await supabase.from("site_cards").update({ position: a.position }).eq("id", swap.id);
+    onReload();
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-md">
+        <CardContent className="pt-6 overflow-x-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Services Cards</h2>
+              <p className="text-sm text-muted-foreground mt-1">Manage the specific service cards shown on the website</p>
+            </div>
+            <Button onClick={openAdd}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Service
+            </Button>
+          </div>
+
+          {cards.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">No services yet. Add your first service.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Icon</TableHead>
+                  <TableHead>Features</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-40">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cards.map((card, i) => {
+                  const parsed = parseServiceDescription(card.description);
+                  const Icon = getIcon(card.icon);
+                  return (
+                    <TableRow key={card.id} className={!parsed.is_active ? "opacity-50" : ""}>
+                      <TableCell className="font-medium">{card.title}</TableCell>
+                      <TableCell>
+                        {card.icon && card.icon !== "None" ? (
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-accent" />
+                            <span className="text-xs text-muted-foreground">{card.icon}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {parsed.features.length} features
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={parsed.is_active ? "default" : "secondary"}
+                          className="cursor-pointer"
+                          onClick={() => toggleActive(card)}
+                        >
+                          {parsed.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 items-center">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={i === 0}
+                            onClick={() => move(card.id, -1)}
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={i === cards.length - 1}
+                            onClick={() => move(card.id, 1)}
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(card)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(card.id)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Service" : "Add Service"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Service Name *</Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  placeholder="e.g. Quantity Surveying"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <Select value={icon} onValueChange={setIcon}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="None">None (No Icon)</SelectItem>
+                    {ICON_NAMES.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Short description (optional)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Features (one per line)</Label>
+              <Textarea
+                value={featuresText}
+                onChange={(e) => setFeaturesText(e.target.value)}
+                rows={5}
+                placeholder={"Feature 1\nFeature 2\nFeature 3"}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
+              <Label>Active</Label>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saving ? "Saving..." : editing ? "Update Service" : "Add Service"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
 
 const SectionForm = ({
   title,
@@ -335,6 +670,7 @@ const ContentManager = () => {
   const [cards, setCards] = useState<SiteCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("hero");
 
   const [importingSettings, setImportingSettings] = useState(false);
   const [importingCards, setImportingCards] = useState(false);
@@ -486,7 +822,7 @@ const ContentManager = () => {
         if (error) throw error;
 
         toast({ title: "Import Success", description: `Successfully imported ${items.length} site settings records.` });
-        loadAll();
+        loadAll(false);
       } catch (err: any) {
         toast({ title: "Import Failed", description: err.message, variant: "destructive" });
       } finally {
@@ -591,7 +927,7 @@ const ContentManager = () => {
         if (insError) throw insError;
 
         toast({ title: "Import Success", description: `Successfully imported ${items.length} cards across ${sections.length} sections.` });
-        loadAll();
+        loadAll(false);
       } catch (err: any) {
         toast({ title: "Import Failed", description: err.message, variant: "destructive" });
       } finally {
@@ -610,8 +946,8 @@ const ContentManager = () => {
     reader.readAsText(cardsFile);
   };
 
-  const loadAll = async () => {
-    setLoading(true);
+  const loadAll = async (silent = true) => {
+    if (!silent) setLoading(true);
     const [{ data: s }, { data: c }] = await Promise.all([
       supabase.from("site_settings").select("*"),
       supabase.from("site_cards").select("*").order("position"),
@@ -627,14 +963,21 @@ const ContentManager = () => {
       }
       map[row.key] = val;
     });
+    if (!map.services) {
+      map.services = {
+        heading_prefix: "Our",
+        heading_accent: "Services",
+        intro: "We provide a comprehensive range of professional services to support your projects.",
+      };
+    }
     setSettings(map);
     setDrafts(JSON.parse(JSON.stringify(map)));
     setCards((c as SiteCard[]) ?? []);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => {
-    loadAll();
+    loadAll(false);
   }, []);
 
   const updateDraft = (sectionKey: string, field: string, value: string) =>
@@ -682,8 +1025,7 @@ const ContentManager = () => {
     setSaving(key);
     const { error } = await supabase
       .from("site_settings")
-      .update({ value: drafts[key] })
-      .eq("key", key);
+      .upsert({ key, value: drafts[key] }, { onConflict: "key" });
     setSaving(null);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -708,10 +1050,11 @@ const ContentManager = () => {
         <p className="text-sm text-muted-foreground">Edit text and cards shown on the public landing page.</p>
       </div>
 
-      <Tabs defaultValue="hero">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="how">How It Works</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="prelaunch">Pre-launch</TabsTrigger>
@@ -768,6 +1111,25 @@ const ContentManager = () => {
             section="about"
             sectionLabel="About Cards"
             cards={cards.filter((c) => c.section === "about")}
+            onReload={loadAll}
+          />
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-6 mt-4">
+          <SectionForm
+            title="Services Section"
+            fields={[
+              { key: "heading_prefix", label: "Heading prefix" },
+              { key: "heading_accent", label: "Heading accent (highlighted text)" },
+              { key: "intro", label: "Intro paragraph", type: "textarea" },
+            ]}
+            values={drafts.services ?? {}}
+            onChange={(k, v) => updateDraft("services", k, v)}
+            onSave={() => saveSection("services")}
+            saving={saving === "services"}
+          />
+          <ServicesManager
+            cards={cards.filter((c) => c.section === "services")}
             onReload={loadAll}
           />
         </TabsContent>

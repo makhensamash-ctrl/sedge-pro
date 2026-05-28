@@ -23,6 +23,9 @@ Deno.serve(async (req) => {
     }
 
     const {
+      packageName,
+      tierId,
+      promoCode,
       clientName,
       email,
       phone,
@@ -34,7 +37,6 @@ Deno.serve(async (req) => {
       planLabel,
       planPrice,
       amount: reqAmount,
-      promoCode,
     } = await req.json();
 
     // Validate required fields
@@ -111,7 +113,99 @@ Deno.serve(async (req) => {
       clientId = newClient.id;
     }
 
-    // 2. Get default business profile
+    // 2. Server-side pricing: Look up tier price and apply promotions (mirrors create-yoco-checkout)
+    let amount: number;
+    let description: string;
+    let resolvedPackageName = packageName || "Pre-Launch Promotion";
+    let discountAppliedLabel = "";
+
+    if (tierId) {
+      // Secure path: look up the real price from the database
+      const { data: tierData, error: tierError } = await supabase
+        .from("package_pricing_tiers")
+        .select("price_cents, package_id, billing_cycle, name")
+        .eq("id", tierId)
+        .single();
+
+      if (tierError || !tierData) {
+        console.error("Tier fetch failed:", tierError);
+        return new Response(
+          JSON.stringify({ error: "Invalid pricing tier selection" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let basePriceCents = tierData.price_cents;
+      let finalPriceCents = basePriceCents;
+
+      // Apply promotions server-side
+      const promoQuery = supabase
+        .from("promotions")
+        .select("*")
+        .eq("is_active", true);
+
+      const { data: promos, error: promoError } = await (promoCode
+        ? promoQuery.eq("code", promoCode.trim().toUpperCase())
+        : promoQuery.is("code", null));
+
+      if (!promoError && promos && promos.length > 0) {
+        const now = new Date().toISOString();
+        const validPromos = promos.filter((p: any) => {
+          const startOk = p.start_date <= now;
+          const endOk = !p.end_date || now <= p.end_date;
+          const packageOk = !tierData.package_id || !p.applicable_package_ids || p.applicable_package_ids.includes(tierData.package_id);
+          return startOk && endOk && packageOk;
+        });
+
+        if (validPromos.length > 0) {
+          const activePromo = validPromos[0];
+          if (activePromo.discount_type === "percentage") {
+            finalPriceCents = Math.round(basePriceCents * (1 - activePromo.discount_value / 100));
+            discountAppliedLabel = `${activePromo.discount_value}% OFF via "${activePromo.name}"`;
+          } else {
+            finalPriceCents = Math.max(0, basePriceCents - activePromo.discount_value);
+            discountAppliedLabel = `R${activePromo.discount_value / 100} OFF via "${activePromo.name}"`;
+          }
+        }
+      }
+
+      // Convert cents to Rands
+      amount = finalPriceCents / 100;
+
+      // Resolve package name from DB if not provided by client
+      if (!packageName && tierData.package_id) {
+        const { data: pkgData } = await supabase
+          .from("packages")
+          .select("name")
+          .eq("id", tierData.package_id)
+          .single();
+        if (pkgData) resolvedPackageName = pkgData.name;
+      }
+
+      const billingLabel = tierData.billing_cycle === "once_off" ? "Once-off Payment" : "Monthly Instalment (1 of 12)";
+      description = `${resolvedPackageName} — ${billingLabel}`;
+      if (discountAppliedLabel) {
+        description += ` (${discountAppliedLabel})`;
+      }
+    } else {
+      // Legacy fallback: use client-provided amount
+      const parsedAmount = typeof reqAmount === "number" ? reqAmount : Number(reqAmount);
+      if (reqAmount !== undefined && reqAmount !== null && !isNaN(parsedAmount) && parsedAmount >= 0) {
+        amount = parsedAmount;
+      } else if (paymentPlan === "once-off") {
+        amount = 5000;
+      } else {
+        amount = 700;
+      }
+
+      if (paymentPlan === "once-off") {
+        description = `${resolvedPackageName} — Once-off Payment`;
+      } else {
+        description = `${resolvedPackageName} — Monthly Instalment (1 of 12)`;
+      }
+    }
+
+    // 3. Get default business profile
     const { data: businessProfile } = await supabase
       .from("business_profiles")
       .select("id, bank_name, account_number, branch_code, account_holder_name")
@@ -119,84 +213,14 @@ Deno.serve(async (req) => {
       .limit(1)
       .single();
 
-    // 3. Generate invoice number
+    // 4. Generate invoice number
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
     const rand = Math.floor(Math.random() * 900 + 100);
     const invoiceNumber = `INV-${dateStr}-${rand}`;
 
-    // 4. Calculate amounts based on plan (no VAT)
-    let amount: number;
-    let description: string;
-
-    const parsedAmount = typeof reqAmount === "number" ? reqAmount : Number(reqAmount);
-    if (reqAmount !== undefined && reqAmount !== null && !isNaN(parsedAmount) && parsedAmount > 0) {
-      amount = parsedAmount;
-    } else if (paymentPlan === "once-off") {
-      amount = 5000;
-    } else {
-      amount = 700;
-    }
-
-    if (paymentPlan === "once-off") {
-      description = "Pre-Launch Promotion — Once-off Payment";
-    } else {
-      description = "Pre-Launch Promotion — Monthly Instalment (1 of 12)";
-    }
-
-    // Apply promo code if provided
-    let finalAmount = amount;
-    let discountAppliedLabel = "";
-
-    if (promoCode && typeof promoCode === "string" && promoCode.trim()) {
-      const trimmedCode = promoCode.trim().toUpperCase();
-      const { data: promo, error: promoError } = await supabase
-        .from("promotions")
-        .select("*")
-        .eq("code", trimmedCode)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (promoError) {
-        console.error("Promo code lookup error:", promoError);
-      } else if (promo) {
-        const nowTime = new Date().getTime();
-        const startsAt = promo.starts_at ? new Date(promo.starts_at).getTime() : null;
-        const endsAt = promo.ends_at ? new Date(promo.ends_at).getTime() : null;
-        const hasStarted = !startsAt || nowTime >= startsAt;
-        const hasNotExpired = !endsAt || nowTime <= endsAt;
-        const underLimit = promo.max_redemptions === null || promo.redemptions_count < promo.max_redemptions;
-
-        if (hasStarted && hasNotExpired && underLimit) {
-          if (promo.discount_type === "percentage") {
-            const discountRands = Math.round((amount * promo.discount_value) / 100);
-            finalAmount = Math.max(0, amount - discountRands);
-            discountAppliedLabel = ` (Promo ${trimmedCode} - ${promo.discount_value}% off)`;
-          } else if (promo.discount_type === "fixed_amount") {
-            const discountRands = promo.discount_value / 100;
-            finalAmount = Math.max(0, amount - discountRands);
-            discountAppliedLabel = ` (Promo ${trimmedCode} - R${discountRands.toFixed(2)} off)`;
-          }
-
-          // Increment redemptions count
-          await supabase
-            .from("promotions")
-            .update({ redemptions_count: promo.redemptions_count + 1 })
-            .eq("id", promo.id);
-        } else {
-          console.warn(`Promo code ${trimmedCode} is expired or limit reached.`);
-        }
-      } else {
-        console.warn(`Promo code ${trimmedCode} not found or inactive`);
-      }
-    }
-
     const taxAmount = 0;
-    const totalAmount = finalAmount;
-
-    const bankingText = businessProfile
-      ? `\n\nBANKING DETAILS:\nBank: ${businessProfile.bank_name}\nAccount Holder: ${businessProfile.account_holder_name}\nAccount Number: ${businessProfile.account_number}\nBranch Code: ${businessProfile.branch_code}\nReference: ${invoiceNumber}`
-      : "";
+    const totalAmount = amount;
 
     // 5. Create invoice
     const dueDate = new Date(now);
@@ -208,15 +232,15 @@ Deno.serve(async (req) => {
         invoice_number: invoiceNumber,
         client_id: clientId,
         business_profile_id: businessProfile?.id || null,
-        amount: finalAmount,
+        amount,
         tax_amount: taxAmount,
         total_amount: totalAmount,
         currency: "ZAR",
         status: "sent",
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
-        description: description + discountAppliedLabel,
-        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}${bankingText}${promoCode ? `\nApplied Promo Code: ${promoCode.trim().toUpperCase()}${discountAppliedLabel}` : ""}`.trim(),
+        description,
+        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
         recurrence_count: 0,
@@ -239,17 +263,17 @@ Deno.serve(async (req) => {
     // 6. Create invoice line item
     await supabase.from("invoice_line_items").insert({
       invoice_id: invoice.id,
-      product_name: "SEDGE Pro — Pre-Launch Promotion",
-      description: description + discountAppliedLabel,
+      product_name: `SEDGE Pro — ${resolvedPackageName}`,
+      description,
       quantity: 1,
-      unit_price: finalAmount,
-      total_price: finalAmount,
+      unit_price: amount,
+      total_price: amount,
       sort_order: 0,
     });
 
-    // 7. Create payment record
+    // 7. Create payment record with actual package name
     await supabase.from("payments").insert({
-      package_name: "Pre-Launch Promotion",
+      package_name: resolvedPackageName,
       amount_cents: totalAmount * 100,
       currency: "ZAR",
       status: "pending",
@@ -260,11 +284,11 @@ Deno.serve(async (req) => {
         invoiceNumber: invoice.invoice_number,
         paymentMethod: "EFT",
         paymentPlan,
-        promoCode: promoCode || null,
+        ...(discountAppliedLabel ? { discount: discountAppliedLabel } : {}),
       },
     });
 
-    // 8. Create lead
+    // 8. Create lead with package name
     const { data: firstStage } = await supabase
       .from("pipeline_stages")
       .select("id")
@@ -287,8 +311,9 @@ Deno.serve(async (req) => {
         client_name: clientName.trim(),
         email: email.trim(),
         phone: phone?.trim() || null,
-        source: "Pre-Launch Promotion",
-        notes: `Payment: EFT\nPlan: ${String(planLabel || "").slice(0, 100)} (${String(planPrice || "").slice(0, 50)})\nBusiness: ${String(businessName).slice(0, 100)}\n${regNumber ? `Reg: ${String(regNumber).slice(0, 50)}\n` : ""}Invoice: ${invoiceNumber}`,
+        source: resolvedPackageName,
+        package: resolvedPackageName,
+        notes: `Payment: EFT\nPlan: ${String(planLabel || "").slice(0, 100)} (${String(planPrice || "").slice(0, 50)})\nBusiness: ${String(businessName).slice(0, 100)}\n${regNumber ? `Reg: ${String(regNumber).slice(0, 50)}\n` : ""}Invoice: ${invoiceNumber}${discountAppliedLabel ? `\nDiscount: ${discountAppliedLabel}` : ""}`,
         stage_id: firstStage.id,
         position: nextPosition,
       });
