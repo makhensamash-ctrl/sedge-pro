@@ -108,6 +108,67 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
     plan: "once-off",
   });
 
+  // Promo code states
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [promoError, setPromoError] = useState("");
+  const [verifyingPromo, setVerifyingPromo] = useState(false);
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setVerifyingPromo(true);
+    setPromoError("");
+    setAppliedPromo(null);
+
+    try {
+      const codeToSearch = promoCode.trim().toUpperCase();
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("code", codeToSearch)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        setPromoError("Promo code is invalid.");
+        return;
+      }
+
+      if (!data.is_active) {
+        setPromoError("This promo code is no longer active.");
+        return;
+      }
+
+      const now = new Date().getTime();
+      const starts = data.starts_at ? new Date(data.starts_at).getTime() : null;
+      const ends = data.ends_at ? new Date(data.ends_at).getTime() : null;
+
+      if (starts && now < starts) {
+        setPromoError("This promotion has not started yet.");
+        return;
+      }
+
+      if (ends && now > ends) {
+        setPromoError("This promotion has expired.");
+        return;
+      }
+
+      if (data.max_redemptions !== null && data.redemptions_count >= data.max_redemptions) {
+        setPromoError("This promotion code has reached its usage limit.");
+        return;
+      }
+
+      setAppliedPromo(data);
+      toast.success(`Promo code "${codeToSearch}" applied!`);
+    } catch (err: any) {
+      console.error("Promo apply error:", err);
+      setPromoError("Failed to verify code. Please try again.");
+    } finally {
+      setVerifyingPromo(false);
+    }
+  };
+
   useEffect(() => {
     if (open && initialData) {
       setFormData((prev) => {
@@ -150,6 +211,18 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
 
   const handlePaymentSubmit = async () => {
     setSubmitting(true);
+
+    const baseAmountCents = selectedPlan.amountCents;
+    let finalAmountCents = baseAmountCents;
+
+    if (appliedPromo) {
+      if (appliedPromo.discount_type === "percentage") {
+        finalAmountCents = Math.round(baseAmountCents * (100 - appliedPromo.discount_value) / 100);
+      } else {
+        finalAmountCents = Math.max(100, baseAmountCents - appliedPromo.discount_value);
+      }
+    }
+
     try {
       if (paymentMethod === "eft") {
         const { data, error } = await supabase.functions.invoke("create-eft-checkout", {
@@ -164,7 +237,8 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
             paymentPlan: formData.plan,
             planLabel: selectedPlan.label,
             planPrice: selectedPlan.price,
-            amount: selectedPlan.amountCents / 100,
+            amount: finalAmountCents / 100,
+            promoCode: appliedPromo ? appliedPromo.code : null,
           },
         });
 
@@ -180,7 +254,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
         const { data, error } = await supabase.functions.invoke("create-yoco-checkout", {
           body: {
             packageName: `Pre-Launch Promotion (${selectedPlan.label})`,
-            amount: selectedPlan.amountCents,
+            amount: finalAmountCents,
             customerName: formData.client_name.trim(),
             customerEmail: formData.email.trim(),
             customerPhone: formData.phone.trim(),
@@ -189,14 +263,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
             regNumber: formData.regNumber.trim(),
             billingAddress: formData.billingAddress.trim(),
             paymentPlan: formData.plan,
-            lineItems: [
-              {
-                displayName: `Pre-Launch Promotion — ${selectedPlan.label}`,
-                quantity: 1,
-                pricingDetails: { price: selectedPlan.amountCents },
-                description: selectedPlan.description,
-              },
-            ],
+            promoCode: appliedPromo ? appliedPromo.code : null,
           },
         });
 
@@ -228,6 +295,9 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
         setBankDetails(null);
         setInvoiceNumber("");
         setTotalAmount(0);
+        setPromoCode("");
+        setAppliedPromo(null);
+        setPromoError("");
         setFormData({ client_name: "", email: "", phone: "", businessName: "", regNumber: "", billingAddress: "", heardAbout: "", plan: "once-off" });
       }, 300);
     }
@@ -315,6 +385,88 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
                     </label>
                   ))}
                 </RadioGroup>
+              </div>
+
+              {/* Promo Code Input */}
+              <div className="space-y-2 border-t pt-3 mt-3">
+                <Label htmlFor="eb-promo">Promo Code</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="eb-promo"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value.toUpperCase());
+                      setPromoError("");
+                      setAppliedPromo(null);
+                    }}
+                    placeholder="e.g. SEDGE50"
+                    disabled={!!appliedPromo || verifyingPromo}
+                    className="font-mono uppercase tracking-wider"
+                  />
+                  {appliedPromo ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setAppliedPromo(null);
+                        setPromoCode("");
+                      }}
+                      className="text-destructive border-destructive/20 hover:bg-destructive/10 shrink-0"
+                    >
+                      Clear
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyPromo}
+                      disabled={verifyingPromo || !promoCode.trim()}
+                      className="shrink-0"
+                    >
+                      {verifyingPromo ? "Verifying..." : "Apply"}
+                    </Button>
+                  )}
+                </div>
+                {promoError && <p className="text-xs text-destructive font-semibold">{promoError}</p>}
+                {appliedPromo && (
+                  <p className="text-xs text-green-600 font-bold">
+                    ✓ Code applied! {appliedPromo.discount_type === "percentage" ? `${appliedPromo.discount_value}% discount` : `R ${(appliedPromo.discount_value / 100).toLocaleString()} discount`}
+                  </p>
+                )}
+              </div>
+
+              {/* Price Summary */}
+              <div className="bg-muted/40 p-3 rounded-lg border text-sm space-y-1.5 mt-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Base Plan Price:</span>
+                  <span className="font-semibold">{selectedPlan.price}</span>
+                </div>
+                {appliedPromo && (
+                  <div className="flex justify-between text-green-600 font-semibold">
+                    <span>Discount Applied:</span>
+                    <span>
+                      -{appliedPromo.discount_type === "percentage"
+                        ? `${appliedPromo.discount_value}%`
+                        : `R ${(appliedPromo.discount_value / 100).toLocaleString()}`}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t pt-1.5 font-bold text-foreground">
+                  <span>Total Due:</span>
+                  <span className="text-accent text-base">
+                    {(() => {
+                      const basePrice = selectedPlan.amountCents;
+                      if (!appliedPromo) return selectedPlan.price;
+                      let final = basePrice;
+                      if (appliedPromo.discount_type === "percentage") {
+                        final = Math.round(basePrice * (100 - appliedPromo.discount_value) / 100);
+                      } else {
+                        final = Math.max(100, basePrice - appliedPromo.discount_value);
+                      }
+                      return `R ${(final / 100).toLocaleString("en-ZA")}`;
+                    })()}
+                  </span>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" size="lg">

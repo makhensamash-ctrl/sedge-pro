@@ -24,7 +24,7 @@ serve(async (req) => {
       });
     }
 
-    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress, paymentPlan } = await req.json();
+    const { packageName, amount, lineItems, customerName, customerEmail, customerPhone, heardAbout, businessName, regNumber, billingAddress, paymentPlan, promoCode } = await req.json();
     const isMonthlyPlan = paymentPlan === "monthly";
 
     // Validate required fields
@@ -138,8 +138,54 @@ serve(async (req) => {
     const rand = Math.floor(Math.random() * 900 + 100);
     const invoiceNumber = `INV-${dateStr}-${rand}`;
 
+    // Apply promo code if provided
+    let finalAmount = amount;
+    let discountAppliedLabel = "";
+
+    if (promoCode && typeof promoCode === "string" && promoCode.trim()) {
+      const trimmedCode = promoCode.trim().toUpperCase();
+      const { data: promo, error: promoError } = await supabaseAdmin
+        .from("promotions")
+        .select("*")
+        .eq("code", trimmedCode)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (promoError) {
+        console.error("Promo code lookup error:", promoError);
+      } else if (promo) {
+        const nowTime = new Date().getTime();
+        const startsAt = promo.starts_at ? new Date(promo.starts_at).getTime() : null;
+        const endsAt = promo.ends_at ? new Date(promo.ends_at).getTime() : null;
+        const hasStarted = !startsAt || nowTime >= startsAt;
+        const hasNotExpired = !endsAt || nowTime <= endsAt;
+        const underLimit = promo.max_redemptions === null || promo.redemptions_count < promo.max_redemptions;
+
+        if (hasStarted && hasNotExpired && underLimit) {
+          if (promo.discount_type === "percentage") {
+            const discountCents = Math.round((amount * promo.discount_value) / 100);
+            finalAmount = Math.max(100, amount - discountCents); // Ensure at least R1 for card payments
+            discountAppliedLabel = ` (Promo ${trimmedCode} - ${promo.discount_value}% off)`;
+          } else if (promo.discount_type === "fixed_amount") {
+            finalAmount = Math.max(100, amount - promo.discount_value);
+            discountAppliedLabel = ` (Promo ${trimmedCode} - R${(promo.discount_value / 100).toFixed(2)} off)`;
+          }
+
+          // Increment redemptions count
+          await supabaseAdmin
+            .from("promotions")
+            .update({ redemptions_count: promo.redemptions_count + 1 })
+            .eq("id", promo.id);
+        } else {
+          console.warn(`Promo code ${trimmedCode} is expired or limit reached.`);
+        }
+      } else {
+        console.warn(`Promo code ${trimmedCode} not found or inactive`);
+      }
+    }
+
     // 4. Calculate amounts (no VAT)
-    const invoiceAmount = amount / 100;
+    const invoiceAmount = finalAmount / 100;
     const taxAmount = 0;
     const totalAmount = invoiceAmount;
     const description = packageName ? String(packageName).slice(0, 200) : "Card Payment";
@@ -161,12 +207,13 @@ serve(async (req) => {
         status: "sent",
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
-        description: isMonthlyPlan ? `${description} (1 of 12)` : description,
+        description: isMonthlyPlan ? `${description}${discountAppliedLabel} (1 of 12)` : `${description}${discountAppliedLabel}`,
         notes: [
           `Payment method: Card`,
           isMonthlyPlan ? `Recurring plan: 12 monthly instalments` : null,
           regNumber ? `Registration: ${String(regNumber).slice(0, 50)}` : null,
           heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
+          promoCode ? `Applied Promo Code: ${promoCode.trim().toUpperCase()}${discountAppliedLabel}` : null,
         ].filter(Boolean).join("\n"),
         is_recurring: isMonthlyPlan,
         recurrence_interval: isMonthlyPlan ? "monthly" : null,
@@ -190,8 +237,8 @@ serve(async (req) => {
     // 6. Create invoice line item
     await supabaseAdmin.from("invoice_line_items").insert({
       invoice_id: invoice.id,
-      product_name: "SEDGE Pro — Pre-Launch Promotion",
-      description,
+      product_name: `SEDGE Pro — ${packageName || "Package"}`,
+      description: description + discountAppliedLabel,
       quantity: 1,
       unit_price: invoiceAmount,
       total_price: invoiceAmount,
@@ -202,30 +249,23 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://sedge-pro.lovable.app";
 
     const body: Record<string, unknown> = {
-      amount,
+      amount: finalAmount,
       currency: "ZAR",
       successUrl: `${origin}/payment/success`,
       cancelUrl: `${origin}/payment/failed`,
       failureUrl: `${origin}/payment/failed`,
-      metadata: { packageName: description, customerName, customerEmail: trimmedEmail, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      metadata: { packageName: description + discountAppliedLabel, customerName, customerEmail: trimmedEmail, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      lineItems: [
+        {
+          displayName: description + discountAppliedLabel,
+          quantity: 1,
+          pricingDetails: {
+            price: finalAmount,
+            currency: "ZAR",
+          },
+        }
+      ]
     };
-
-    if (lineItems) {
-      if (!Array.isArray(lineItems) || lineItems.length === 0 || lineItems.length > 20) {
-        return new Response(JSON.stringify({ error: "Invalid lineItems" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      body.lineItems = lineItems.map((item: any) => ({
-        displayName: String(item?.displayName ?? "Item").slice(0, 200),
-        quantity: Math.max(1, Math.min(Number(item?.quantity) || 1, 999)),
-        pricingDetails: {
-          price: Math.max(0, Math.min(Number(item?.pricingDetails?.price) || 0, 100000000)),
-          currency: "ZAR",
-        },
-      }));
-    }
 
     const response = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
@@ -251,12 +291,12 @@ serve(async (req) => {
     // 8. Store payment record
     await supabaseAdmin.from("payments").insert({
       checkout_id: data.id,
-      package_name: description,
-      amount_cents: amount,
+      package_name: description + discountAppliedLabel,
+      amount_cents: finalAmount,
       customer_email: trimmedEmail || null,
       client_name: customerName?.trim() || null,
       status: "created",
-      metadata: { customerName, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      metadata: { customerName, customerPhone, invoiceId: invoice.id, invoiceNumber: invoice.invoice_number, promoCode: promoCode || null },
     });
 
     return new Response(JSON.stringify({ redirectUrl: data.redirectUrl }), {

@@ -16,6 +16,7 @@ interface Package {
   id: string;
   name: string;
   price_cents: number;
+  price_cents_annual: number;
   currency: string;
   description: string | null;
   features: string[];
@@ -33,6 +34,7 @@ const Packages = () => {
   // Form state
   const [name, setName] = useState("");
   const [priceCents, setPriceCents] = useState("");
+  const [priceCentsAnnual, setPriceCentsAnnual] = useState("");
   const [description, setDescription] = useState("");
   const [featuresText, setFeaturesText] = useState("");
   const [isPopular, setIsPopular] = useState(false);
@@ -49,6 +51,7 @@ const Packages = () => {
     setEditing(null);
     setName("");
     setPriceCents("");
+    setPriceCentsAnnual("");
     setDescription("");
     setFeaturesText("");
     setIsPopular(false);
@@ -60,6 +63,7 @@ const Packages = () => {
     setEditing(pkg);
     setName(pkg.name);
     setPriceCents(String(pkg.price_cents / 100));
+    setPriceCentsAnnual(String((pkg.price_cents_annual || 0) / 100));
     setDescription(pkg.description || "");
     setFeaturesText(pkg.features.join("\n"));
     setIsPopular(pkg.is_popular);
@@ -73,9 +77,13 @@ const Packages = () => {
     setSaving(true);
 
     const features = featuresText.split("\n").map((f) => f.trim()).filter(Boolean);
+    const monthlyRands = parseFloat(priceCents) || 0;
+    const annualRands = parseFloat(priceCentsAnnual) || 0;
+
     const payload = {
       name: name.trim(),
-      price_cents: 0,
+      price_cents: Math.round(monthlyRands * 100),
+      price_cents_annual: Math.round(annualRands * 100),
       description: description.trim() || null,
       features,
       is_popular: isPopular,
@@ -132,7 +140,8 @@ const Packages = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  
+                  <TableHead>Monthly Price</TableHead>
+                  <TableHead>Annual Price</TableHead>
                   <TableHead>Features</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-28">Actions</TableHead>
@@ -147,7 +156,8 @@ const Packages = () => {
                         {pkg.is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
                       </div>
                     </TableCell>
-                    
+                    <TableCell className="font-semibold">{formatPrice(pkg.price_cents)}</TableCell>
+                    <TableCell className="font-semibold text-accent">{formatPrice(pkg.price_cents_annual || 0)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pkg.features.length} features</TableCell>
                     <TableCell>
                       <Badge
@@ -185,6 +195,16 @@ const Packages = () => {
             <div className="space-y-2">
               <Label>Description</Label>
               <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description (optional)" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Monthly Price (R) *</Label>
+                <Input type="number" step="0.01" min="0" value={priceCents} onChange={(e) => setPriceCents(e.target.value)} required placeholder="e.g. 2997.00" />
+              </div>
+              <div className="space-y-2">
+                <Label>Annual Price (R) *</Label>
+                <Input type="number" step="0.01" min="0" value={priceCentsAnnual} onChange={(e) => setPriceCentsAnnual(e.target.value)} required placeholder="e.g. 29970.00" />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Features (one per line)</Label>

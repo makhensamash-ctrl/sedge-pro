@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
       planLabel,
       planPrice,
       amount: reqAmount,
+      promoCode,
     } = await req.json();
 
     // Validate required fields
@@ -143,8 +144,55 @@ Deno.serve(async (req) => {
       description = "Pre-Launch Promotion — Monthly Instalment (1 of 12)";
     }
 
+    // Apply promo code if provided
+    let finalAmount = amount;
+    let discountAppliedLabel = "";
+
+    if (promoCode && typeof promoCode === "string" && promoCode.trim()) {
+      const trimmedCode = promoCode.trim().toUpperCase();
+      const { data: promo, error: promoError } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("code", trimmedCode)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (promoError) {
+        console.error("Promo code lookup error:", promoError);
+      } else if (promo) {
+        const nowTime = new Date().getTime();
+        const startsAt = promo.starts_at ? new Date(promo.starts_at).getTime() : null;
+        const endsAt = promo.ends_at ? new Date(promo.ends_at).getTime() : null;
+        const hasStarted = !startsAt || nowTime >= startsAt;
+        const hasNotExpired = !endsAt || nowTime <= endsAt;
+        const underLimit = promo.max_redemptions === null || promo.redemptions_count < promo.max_redemptions;
+
+        if (hasStarted && hasNotExpired && underLimit) {
+          if (promo.discount_type === "percentage") {
+            const discountRands = Math.round((amount * promo.discount_value) / 100);
+            finalAmount = Math.max(0, amount - discountRands);
+            discountAppliedLabel = ` (Promo ${trimmedCode} - ${promo.discount_value}% off)`;
+          } else if (promo.discount_type === "fixed_amount") {
+            const discountRands = promo.discount_value / 100;
+            finalAmount = Math.max(0, amount - discountRands);
+            discountAppliedLabel = ` (Promo ${trimmedCode} - R${discountRands.toFixed(2)} off)`;
+          }
+
+          // Increment redemptions count
+          await supabase
+            .from("promotions")
+            .update({ redemptions_count: promo.redemptions_count + 1 })
+            .eq("id", promo.id);
+        } else {
+          console.warn(`Promo code ${trimmedCode} is expired or limit reached.`);
+        }
+      } else {
+        console.warn(`Promo code ${trimmedCode} not found or inactive`);
+      }
+    }
+
     const taxAmount = 0;
-    const totalAmount = amount;
+    const totalAmount = finalAmount;
 
     const bankingText = businessProfile
       ? `\n\nBANKING DETAILS:\nBank: ${businessProfile.bank_name}\nAccount Holder: ${businessProfile.account_holder_name}\nAccount Number: ${businessProfile.account_number}\nBranch Code: ${businessProfile.branch_code}\nReference: ${invoiceNumber}`
@@ -160,15 +208,15 @@ Deno.serve(async (req) => {
         invoice_number: invoiceNumber,
         client_id: clientId,
         business_profile_id: businessProfile?.id || null,
-        amount,
+        amount: finalAmount,
         tax_amount: taxAmount,
         total_amount: totalAmount,
         currency: "ZAR",
         status: "sent",
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
-        description,
-        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}${bankingText}`.trim(),
+        description: description + discountAppliedLabel,
+        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}${bankingText}${promoCode ? `\nApplied Promo Code: ${promoCode.trim().toUpperCase()}${discountAppliedLabel}` : ""}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
         recurrence_count: 0,
@@ -192,10 +240,10 @@ Deno.serve(async (req) => {
     await supabase.from("invoice_line_items").insert({
       invoice_id: invoice.id,
       product_name: "SEDGE Pro — Pre-Launch Promotion",
-      description,
+      description: description + discountAppliedLabel,
       quantity: 1,
-      unit_price: amount,
-      total_price: amount,
+      unit_price: finalAmount,
+      total_price: finalAmount,
       sort_order: 0,
     });
 
@@ -212,6 +260,7 @@ Deno.serve(async (req) => {
         invoiceNumber: invoice.invoice_number,
         paymentMethod: "EFT",
         paymentPlan,
+        promoCode: promoCode || null,
       },
     });
 
