@@ -367,7 +367,7 @@ const PricingSection = () => {
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      if (checkoutStep === "eft-success" && totalAmount === 0) {
+      if (checkoutStep === "eft-success") {
         window.location.href = "https://app.sedgepro.co.za";
         return;
       }
@@ -885,7 +885,7 @@ const PricingSection = () => {
                     )}
 
                     <Button className="w-full rounded-xl py-6 font-bold" onClick={() => handleClose(false)}>
-                      {totalAmount === 0 ? "Ok" : "Close"}
+                      Ok
                     </Button>
                   </div>
                 )}
