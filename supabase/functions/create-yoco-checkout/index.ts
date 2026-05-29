@@ -36,6 +36,7 @@ serve(async (req) => {
       heardAbout, 
       businessName, 
       regNumber, 
+      vatNumber,
       billingAddress, 
       paymentPlan 
     } = await req.json();
@@ -157,6 +158,7 @@ serve(async (req) => {
           phone: customerPhone?.trim() || null,
           company: businessName?.trim() || null,
           address: billingAddress?.trim() || null,
+          vat_number: vatNumber?.trim() || null,
         }).eq("id", clientId);
       } else {
         const { data: newClient, error: clientError } = await supabaseAdmin
@@ -167,8 +169,10 @@ serve(async (req) => {
             phone: customerPhone?.trim() || null,
             company: businessName?.trim() || null,
             address: billingAddress?.trim() || null,
+            vat_number: vatNumber?.trim() || null,
             notes: [
               regNumber ? `Reg: ${String(regNumber).slice(0, 50)}` : null,
+              vatNumber ? `VAT: ${String(vatNumber).slice(0, 50)}` : null,
               heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
             ].filter(Boolean).join("\n") || null,
           })
@@ -254,6 +258,7 @@ serve(async (req) => {
           isMonthlyPlan ? `Recurring plan: 12 monthly instalments` : null,
           discountAppliedLabel ? `Applied Promotion: ${discountAppliedLabel}` : null,
           regNumber ? `Registration: ${String(regNumber).slice(0, 50)}` : null,
+          vatNumber ? `VAT No: ${String(vatNumber).slice(0, 50)}` : null,
           heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
         ].filter(Boolean).join("\n"),
         is_recurring: isMonthlyPlan,

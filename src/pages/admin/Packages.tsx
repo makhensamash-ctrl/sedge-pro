@@ -14,6 +14,24 @@ import { Plus, Pencil, Trash2, Star, Tag, Percent, Calendar, Check, X, Award } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 
 interface PricingTier {
   id?: string;
@@ -58,6 +76,37 @@ const formatForDateTimeLocal = (dateStr: string | null | undefined): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const SortableRow = ({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={`${className || ""} ${isDragging ? "bg-muted/80 shadow-sm" : ""}`}
+    >
+      <TableCell className="w-8 cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground transition-colors" {...attributes} {...listeners}>
+        <GripVertical className="w-4 h-4" />
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+};
+
 const Packages = () => {
   const [activeTab, setActiveTab] = useState("packages");
   const [packages, setPackages] = useState<Package[]>([]);
@@ -88,6 +137,49 @@ const Packages = () => {
   const [endDate, setEndDate] = useState("");
   const [promoIsActive, setPromoIsActive] = useState(true);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = packages.findIndex((pkg) => pkg.id === active.id);
+    const newIndex = packages.findIndex((pkg) => pkg.id === over.id);
+
+    const reorderedPkgs = arrayMove(packages, oldIndex, newIndex);
+    setPackages(reorderedPkgs);
+
+    try {
+      const updates = reorderedPkgs.map((pkg, index) => ({
+        id: pkg.id,
+        name: pkg.name,
+        price_cents: pkg.price_cents,
+        description: pkg.description,
+        features: pkg.features,
+        is_popular: pkg.is_popular,
+        is_active: pkg.is_active,
+        position: index,
+      }));
+
+      const { error } = await supabase.from("packages").upsert(updates);
+      if (error) throw error;
+      toast.success("Package order updated");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to update package order");
+      fetchPackages();
+    }
+  };
 
   const fetchPackages = async () => {
     const { data } = await supabase
@@ -382,81 +474,93 @@ const Packages = () => {
               {packages.length === 0 ? (
                 <p className="text-muted-foreground text-center py-12">No packages configured. Add your first package.</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Features</TableHead>
-                      <TableHead>Once-off / Annual Price</TableHead>
-                      <TableHead>Monthly Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-28">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {packages.map((pkg) => (
-                      <TableRow key={pkg.id} className={!pkg.is_active ? "opacity-60" : ""}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {pkg.name}
-                            {pkg.is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{pkg.features.length} features</TableCell>
-                        
-                        {/* Once-off / Annual Price Column */}
-                        <TableCell>
-                          {(() => {
-                            const tier = pkg.package_pricing_tiers?.find(t => t.billing_cycle === "once_off" || t.billing_cycle === "annual");
-                            if (!tier) return <span className="text-muted-foreground text-xs font-mono">-</span>;
-                            return (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-semibold text-sm">{formatPrice(Number(tier.price_cents))}</span>
-                                <span className="text-[10px] text-muted-foreground uppercase">{tier.billing_cycle === "once_off" ? "once-off" : "annual"}</span>
-                                {!tier.is_active && <Badge variant="secondary" className="text-[9px] w-fit mt-0.5">Inactive</Badge>}
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-
-                        {/* Monthly Price Column */}
-                        <TableCell>
-                          {(() => {
-                            const tier = pkg.package_pricing_tiers?.find(t => t.billing_cycle === "monthly");
-                            if (!tier) return <span className="text-muted-foreground text-xs font-mono">-</span>;
-                            return (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-semibold text-sm text-primary">{formatPrice(Number(tier.price_cents))}</span>
-                                <span className="text-[10px] text-muted-foreground uppercase">monthly</span>
-                                {!tier.is_active && <Badge variant="secondary" className="text-[9px] w-fit mt-0.5">Inactive</Badge>}
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant={pkg.is_active ? "default" : "secondary"}
-                            className="cursor-pointer"
-                            onClick={() => togglePkgActive(pkg)}
-                          >
-                            {pkg.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditPkg(pkg)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeletePkg(pkg.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8" />
+                        <TableHead>Name</TableHead>
+                        <TableHead>Features</TableHead>
+                        <TableHead>Once-off / Annual Price</TableHead>
+                        <TableHead>Monthly Price</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-28">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      <SortableContext
+                        items={packages.map((pkg) => pkg.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {packages.map((pkg) => (
+                          <SortableRow key={pkg.id} id={pkg.id} className={!pkg.is_active ? "opacity-60" : ""}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {pkg.name}
+                                {pkg.is_popular && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{pkg.features.length} features</TableCell>
+                            
+                            {/* Once-off / Annual Price Column */}
+                            <TableCell>
+                              {(() => {
+                                const tier = pkg.package_pricing_tiers?.find(t => t.billing_cycle === "once_off" || t.billing_cycle === "annual");
+                                if (!tier) return <span className="text-muted-foreground text-xs font-mono">-</span>;
+                                return (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold text-sm">{formatPrice(Number(tier.price_cents))}</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase">{tier.billing_cycle === "once_off" ? "once-off" : "annual"}</span>
+                                    {!tier.is_active && <Badge variant="secondary" className="text-[9px] w-fit mt-0.5">Inactive</Badge>}
+                                  </div>
+                                );
+                              })()}
+                            </TableCell>
+
+                            {/* Monthly Price Column */}
+                            <TableCell>
+                              {(() => {
+                                const tier = pkg.package_pricing_tiers?.find(t => t.billing_cycle === "monthly");
+                                if (!tier) return <span className="text-muted-foreground text-xs font-mono">-</span>;
+                                return (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold text-sm text-primary">{formatPrice(Number(tier.price_cents))}</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase">monthly</span>
+                                    {!tier.is_active && <Badge variant="secondary" className="text-[9px] w-fit mt-0.5">Inactive</Badge>}
+                                  </div>
+                                );
+                              })()}
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge
+                                variant={pkg.is_active ? "default" : "secondary"}
+                                className="cursor-pointer"
+                                onClick={() => togglePkgActive(pkg)}
+                              >
+                                {pkg.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => openEditPkg(pkg)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeletePkg(pkg.id)}>
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </SortableRow>
+                        ))}
+                      </SortableContext>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               )}
             </CardContent>
           </Card>

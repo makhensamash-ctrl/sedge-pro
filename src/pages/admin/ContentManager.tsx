@@ -9,11 +9,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ICON_NAMES, getIcon } from "@/lib/iconMap";
-import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Upload, FileJson, FileSpreadsheet, AlertTriangle, Pencil } from "lucide-react";
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Upload, FileJson, FileSpreadsheet, AlertTriangle, Pencil, GripVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type SiteCard = {
   id: string;
@@ -60,6 +77,37 @@ const serializeServiceDescription = (description: string, features: string[], is
   });
 };
 
+const SortableRow = ({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={`${className || ""} ${isDragging ? "bg-muted/80 shadow-sm" : ""}`}
+    >
+      <TableCell className="w-8 cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground transition-colors" {...attributes} {...listeners}>
+        <GripVertical className="w-4 h-4" />
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+};
+
 const ServicesManager = ({
   cards,
   onReload,
@@ -78,6 +126,57 @@ const ServicesManager = ({
   const [description, setDescription] = useState("");
   const [featuresText, setFeaturesText] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  const [localCards, setLocalCards] = useState<SiteCard[]>([]);
+
+  useEffect(() => {
+    setLocalCards(cards);
+  }, [cards]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = localCards.findIndex((c) => c.id === active.id);
+    const newIndex = localCards.findIndex((c) => c.id === over.id);
+
+    const reordered = arrayMove(localCards, oldIndex, newIndex);
+    setLocalCards(reordered);
+
+    try {
+      const updates = reordered.map((card, index) => ({
+        id: card.id,
+        section: card.section,
+        title: card.title,
+        description: card.description,
+        icon: card.icon,
+        position: index,
+      }));
+
+      const { error } = await supabase.from("site_cards").upsert(updates);
+      if (error) throw error;
+      toast({ title: "Service order updated" });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update service order",
+        variant: "destructive",
+      });
+      onReload();
+    }
+  };
 
   const openAdd = () => {
     setEditing(null);
@@ -186,17 +285,6 @@ const ServicesManager = ({
     }
   };
 
-  const move = async (id: string, dir: -1 | 1) => {
-    const sorted = [...cards].sort((a, b) => a.position - b.position);
-    const idx = sorted.findIndex((c) => c.id === id);
-    const swap = sorted[idx + dir];
-    if (!swap) return;
-    const a = sorted[idx];
-    await supabase.from("site_cards").update({ position: swap.position }).eq("id", a.id);
-    await supabase.from("site_cards").update({ position: a.position }).eq("id", swap.id);
-    onReload();
-  };
-
   return (
     <div className="space-y-6">
       <Card className="border-0 shadow-md">
@@ -212,79 +300,75 @@ const ServicesManager = ({
             </Button>
           </div>
 
-          {cards.length === 0 ? (
+          {localCards.length === 0 ? (
             <p className="text-muted-foreground text-center py-12">No services yet. Add your first service.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Icon</TableHead>
-                  <TableHead>Features</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-40">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cards.map((card, i) => {
-                  const parsed = parseServiceDescription(card.description);
-                  const Icon = getIcon(card.icon);
-                  return (
-                    <TableRow key={card.id} className={!parsed.is_active ? "opacity-50" : ""}>
-                      <TableCell className="font-medium">{card.title}</TableCell>
-                      <TableCell>
-                        {card.icon && card.icon !== "None" ? (
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4 text-accent" />
-                            <span className="text-xs text-muted-foreground">{card.icon}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">None</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {parsed.features.length} features
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={parsed.is_active ? "default" : "secondary"}
-                          className="cursor-pointer"
-                          onClick={() => toggleActive(card)}
-                        >
-                          {parsed.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 items-center">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={i === 0}
-                            onClick={() => move(card.id, -1)}
-                          >
-                            <ArrowUp className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={i === cards.length - 1}
-                            onClick={() => move(card.id, 1)}
-                          >
-                            <ArrowDown className="w-4 h-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => openEdit(card)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(card.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8" />
+                    <TableHead>Name</TableHead>
+                    <TableHead>Icon</TableHead>
+                    <TableHead>Features</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-28">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <SortableContext
+                    items={localCards.map((c) => c.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {localCards.map((card) => {
+                      const parsed = parseServiceDescription(card.description);
+                      const Icon = getIcon(card.icon);
+                      return (
+                        <SortableRow key={card.id} id={card.id} className={!parsed.is_active ? "opacity-50" : ""}>
+                          <TableCell className="font-medium">{card.title}</TableCell>
+                          <TableCell>
+                            {card.icon && card.icon !== "None" ? (
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-accent" />
+                                <span className="text-xs text-muted-foreground">{card.icon}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">None</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {parsed.features.length} features
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={parsed.is_active ? "default" : "secondary"}
+                              className="cursor-pointer"
+                              onClick={() => toggleActive(card)}
+                            >
+                              {parsed.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1 items-center">
+                              <Button size="icon" variant="ghost" onClick={() => openEdit(card)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDelete(card.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </SortableRow>
+                      );
+                    })}
+                  </SortableContext>
+                </TableBody>
+              </Table>
+            </DndContext>
           )}
         </CardContent>
       </Card>

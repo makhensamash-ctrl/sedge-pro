@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
       phone,
       businessName,
       regNumber,
+      vatNumber,
       billingAddress,
       heardAbout,
       paymentPlan,
@@ -85,6 +86,7 @@ Deno.serve(async (req) => {
         phone: phone?.trim() || null,
         company: businessName?.trim() || null,
         address: billingAddress?.trim() || null,
+        vat_number: vatNumber?.trim() || null,
       }).eq("id", clientId);
     } else {
       const { data: newClient, error: clientError } = await supabase
@@ -95,8 +97,10 @@ Deno.serve(async (req) => {
           phone: phone?.trim() || null,
           company: businessName?.trim() || null,
           address: billingAddress?.trim() || null,
+          vat_number: vatNumber?.trim() || null,
           notes: [
             regNumber ? `Reg: ${String(regNumber).slice(0, 50)}` : null,
+            vatNumber ? `VAT: ${String(vatNumber).slice(0, 50)}` : null,
             heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : null,
           ].filter(Boolean).join("\n") || null,
         })
@@ -240,7 +244,7 @@ Deno.serve(async (req) => {
         issue_date: now.toISOString().slice(0, 10),
         due_date: dueDate.toISOString().slice(0, 10),
         description,
-        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
+        notes: `Payment plan: ${String(planLabel || "").slice(0, 100)}\n${regNumber ? `Registration: ${String(regNumber).slice(0, 50)}\n` : ""}${vatNumber ? `VAT: ${String(vatNumber).slice(0, 50)}\n` : ""}${heardAbout ? `Source: ${String(heardAbout).slice(0, 100)}` : ""}`.trim(),
         is_recurring: paymentPlan === "monthly",
         recurrence_interval: paymentPlan === "monthly" ? "monthly" : null,
         recurrence_count: 0,
@@ -313,7 +317,7 @@ Deno.serve(async (req) => {
         phone: phone?.trim() || null,
         source: resolvedPackageName,
         package: resolvedPackageName,
-        notes: `Payment: EFT\nPlan: ${String(planLabel || "").slice(0, 100)} (${String(planPrice || "").slice(0, 50)})\nBusiness: ${String(businessName).slice(0, 100)}\n${regNumber ? `Reg: ${String(regNumber).slice(0, 50)}\n` : ""}Invoice: ${invoiceNumber}${discountAppliedLabel ? `\nDiscount: ${discountAppliedLabel}` : ""}`,
+        notes: `Payment: EFT\nPlan: ${String(planLabel || "").slice(0, 100)} (${String(planPrice || "").slice(0, 50)})\nBusiness: ${String(businessName).slice(0, 100)}\n${regNumber ? `Reg: ${String(regNumber).slice(0, 50)}\n` : ""}${vatNumber ? `VAT: ${String(vatNumber).slice(0, 50)}\n` : ""}Invoice: ${invoiceNumber}${discountAppliedLabel ? `\nDiscount: ${discountAppliedLabel}` : ""}`,
         stage_id: firstStage.id,
         position: nextPosition,
       });

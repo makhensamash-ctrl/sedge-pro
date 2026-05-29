@@ -60,7 +60,7 @@ const PricingSection = () => {
   
   const [packages, setPackages] = useState<PackageData[]>([]);
   const [activePromotions, setActivePromotions] = useState<any[]>([]);
-  const [globalBillingCycle, setGlobalBillingCycle] = useState<"once_off" | "monthly">("once_off");
+  const [globalBillingCycle, setGlobalBillingCycle] = useState<"once_off" | "monthly">("monthly");
   const [cardBillingCycles, setCardBillingCycles] = useState<Record<string, "once_off" | "monthly">>({});
   
   // Checkout controls
@@ -72,6 +72,7 @@ const PricingSection = () => {
   const [heardAbout, setHeardAbout] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [regNumber, setRegNumber] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
   const [billingAddress, setBillingAddress] = useState("");
 
   // Promo Code entry in Checkout
@@ -113,13 +114,13 @@ const PricingSection = () => {
   }, [api]);
 
   const handleGlobalBillingToggle = (checked: boolean) => {
-    const newCycle = checked ? "monthly" : "once_off";
+    const newCycle = checked ? "once_off" : "monthly";
     setGlobalBillingCycle(newCycle);
     setCardBillingCycles({}); // Sync all cards by removing specific overrides
   };
 
   const handleCardBillingToggle = (pkgId: string, checked: boolean) => {
-    const newCycle = checked ? "monthly" : "once_off";
+    const newCycle = checked ? "once_off" : "monthly";
     setCardBillingCycles(prev => ({
       ...prev,
       [pkgId]: newCycle
@@ -195,6 +196,7 @@ const PricingSection = () => {
     setHeardAbout("");
     setBusinessName("");
     setRegNumber("");
+    setVatNumber("");
     setBillingAddress("");
     setPromoCodeInput("");
     setAppliedPromo(null);
@@ -293,6 +295,7 @@ const PricingSection = () => {
             phone: customerPhone.trim() || null,
             businessName: businessName.trim(),
             regNumber: regNumber.trim() || null,
+            vatNumber: vatNumber.trim() || null,
             billingAddress: billingAddress.trim() || null,
             heardAbout: heardAbout || null,
             paymentPlan: tier.billing_cycle === "once_off" ? "once-off" : "monthly",
@@ -323,6 +326,7 @@ const PricingSection = () => {
             heardAbout: heardAbout,
             businessName: businessName.trim(),
             regNumber: regNumber.trim(),
+            vatNumber: vatNumber.trim(),
             billingAddress: billingAddress.trim(),
             paymentPlan: tier.billing_cycle,
             lineItems: [
@@ -361,6 +365,10 @@ const PricingSection = () => {
 
   const handleClose = (open: boolean) => {
     if (!open) {
+      if (checkoutStep === "eft-success" && totalAmount === 0) {
+        window.location.href = "https://app.sedgepro.co.za";
+        return;
+      }
       setTimeout(() => {
         setCheckoutStep("form");
         setPaymentMethod("eft");
@@ -373,6 +381,7 @@ const PricingSection = () => {
         setCustomerPhone("");
         setBusinessName("");
         setRegNumber("");
+        setVatNumber("");
         setBillingAddress("");
         setHeardAbout("");
         setPromoCodeInput("");
@@ -405,27 +414,27 @@ const PricingSection = () => {
         <div className="flex items-center justify-center gap-4 mb-14">
           <span 
             className={`text-base font-semibold cursor-pointer transition-colors duration-200 ${
-              globalBillingCycle === "once_off" ? "text-primary" : "text-muted-foreground"
+              globalBillingCycle === "monthly" ? "text-primary" : "text-muted-foreground"
             }`}
             onClick={() => handleGlobalBillingToggle(false)}
           >
-            Once-off Payment
+            Monthly instalments
           </span>
           
           <Switch
             id="global-billing-switcher"
-            checked={globalBillingCycle === "monthly"}
+            checked={globalBillingCycle === "once_off"}
             onCheckedChange={handleGlobalBillingToggle}
-            className="h-7 w-14 data-[state=checked]:bg-accent/90 data-[state=unchecked]:bg-slate-200 [&>span]:h-6 [&>span]:w-6 [&>span]:data-[state=checked]:translate-x-7 shrink-0"
+            className="h-7 w-14 bg-accent data-[state=checked]:bg-accent data-[state=unchecked]:bg-accent [&>span]:h-6 [&>span]:w-6 [&>span]:data-[state=checked]:translate-x-7 shrink-0"
           />
           
           <span 
             className={`text-base font-semibold cursor-pointer transition-colors duration-200 ${
-              globalBillingCycle === "monthly" ? "text-primary" : "text-muted-foreground"
+              globalBillingCycle === "once_off" ? "text-primary" : "text-muted-foreground"
             }`}
             onClick={() => handleGlobalBillingToggle(true)}
           >
-            Monthly instalments
+            Once-off (Annual)
           </span>
         </div>
 
@@ -450,6 +459,10 @@ const PricingSection = () => {
                 const promo = tier ? getPromotionForPackage(pkg.id) : null;
                 const discountedPrice = tier ? calculateDiscountedPrice(tier.price_cents, promo) : 0;
                 const hasPromo = !!promo;
+
+                const otherCycle = currentCycle === "once_off" ? "monthly" : "once_off";
+                const otherTier = pkg.package_pricing_tiers?.find(t => t.billing_cycle === otherCycle);
+                const otherDiscountedPrice = otherTier ? calculateDiscountedPrice(otherTier.price_cents, promo) : 0;
 
                 return (
                   <CarouselItem key={pkg.id} className="pl-4 basis-[88%] sm:basis-[47%] lg:basis-[31.5%]">
@@ -501,6 +514,11 @@ const PricingSection = () => {
                             <span className="block text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">
                               {tier.billing_cycle === "once_off" ? "once off" : "per month"}
                             </span>
+                            {otherTier &&!isFreePackage && (
+                              <span className="block text-xs text-muted-foreground/60 mt-1.5 font-medium">
+                                or {formatPrice(otherDiscountedPrice)} {otherTier.billing_cycle === "once_off" ? "once off" : "per month"}
+                              </span>
+                            )}
                             {promo?.end_date && (
                               <div className="mt-2 inline-flex items-center gap-1 text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
                                 <Clock className="w-3 h-3 animate-pulse text-amber-500" />
@@ -527,27 +545,27 @@ const PricingSection = () => {
                         <div className="flex items-center justify-center gap-2.5 my-4 pt-4 pb-2 border-t border-border/40">
                           <span 
                             className={`text-xs font-semibold cursor-pointer transition-colors ${
-                              currentCycle === "once_off" ? "text-primary" : "text-muted-foreground/70"
+                              currentCycle === "monthly" ? "text-primary" : "text-muted-foreground/70"
                             } ${isFreePackage ? "cursor-not-allowed opacity-50" : ""}`}
                             onClick={() => !isFreePackage && handleCardBillingToggle(pkg.id, false)}
                           >
-                            Once-off
+                            Monthly
                           </span>
                           
                           <Switch
-                            checked={currentCycle === "monthly"}
+                            checked={currentCycle === "once_off"}
                             onCheckedChange={(checked) => handleCardBillingToggle(pkg.id, checked)}
                             disabled={isFreePackage}
-                            className="data-[state=checked]:bg-accent/90 data-[state=unchecked]:bg-slate-200"
+                            className="bg-accent data-[state=checked]:bg-accent data-[state=unchecked]:bg-accent"
                           />
                           
                           <span 
                             className={`text-xs font-semibold cursor-pointer transition-colors ${
-                              currentCycle === "monthly" ? "text-primary" : "text-muted-foreground/70"
+                              currentCycle === "once_off" ? "text-primary" : "text-muted-foreground/70"
                             } ${isFreePackage ? "cursor-not-allowed opacity-50" : ""}`}
                             onClick={() => !isFreePackage && handleCardBillingToggle(pkg.id, true)}
                           >
-                            Monthly
+                            Once-off (Annual)
                           </span>
                         </div>
                       )}
@@ -653,9 +671,9 @@ const PricingSection = () => {
                           <Input id="reg-number" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="2024/123456/07" className="rounded-lg border-slate-200 focus-visible:ring-accent/90" />
                         </div>
 
-                                 <div className="space-y-1.5 col-span-1">
-                          <Label htmlFor="vat-number" className="text-sm font-semibold text-slate-700">VAT SNumber</Label>
-                          <Input id="vat-number"   placeholder="2024/123456/07" className="rounded-lg border-slate-200 focus-visible:ring-accent/90" />
+                        <div className="space-y-1.5 col-span-1">
+                          <Label htmlFor="vat-number" className="text-sm font-semibold text-slate-700">VAT Number</Label>
+                          <Input id="vat-number" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="4012345678" className="rounded-lg border-slate-200 focus-visible:ring-accent/90" />
                         </div>
                         
                         
@@ -865,7 +883,7 @@ const PricingSection = () => {
                     )}
 
                     <Button className="w-full rounded-xl py-6 font-bold" onClick={() => handleClose(false)}>
-                      Close
+                      {totalAmount === 0 ? "Ok" : "Close"}
                     </Button>
                   </div>
                 )}

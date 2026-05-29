@@ -20,6 +20,7 @@ interface EarlyBirdDialogProps {
     phone?: string;
     businessName?: string;
     regNumber?: string;
+    vatNumber?: string;
     billingAddress?: string;
     heardAbout?: string;
     plan?: string;
@@ -103,6 +104,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
     phone: "",
     businessName: "",
     regNumber: "",
+    vatNumber: "",
     billingAddress: "",
     heardAbout: "",
     plan: "once-off",
@@ -117,6 +119,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
         if (initialData.phone) next.phone = initialData.phone;
         if (initialData.businessName) next.businessName = initialData.businessName;
         if (initialData.regNumber) next.regNumber = initialData.regNumber;
+        if (initialData.vatNumber) next.vatNumber = initialData.vatNumber;
         if (initialData.billingAddress) next.billingAddress = initialData.billingAddress;
         if (initialData.heardAbout) {
           const matchedOption = heardAboutOptions.find(
@@ -160,6 +163,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
             phone: formData.phone.trim() || null,
             businessName: formData.businessName.trim(),
             regNumber: formData.regNumber.trim() || null,
+            vatNumber: formData.vatNumber.trim() || null,
             billingAddress: formData.billingAddress.trim() || null,
             heardAbout: formData.heardAbout || null,
             paymentPlan: formData.plan,
@@ -187,6 +191,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
             heardAbout: formData.heardAbout,
             businessName: formData.businessName.trim(),
             regNumber: formData.regNumber.trim(),
+            vatNumber: formData.vatNumber.trim(),
             billingAddress: formData.billingAddress.trim(),
             paymentPlan: formData.plan,
             lineItems: [
@@ -228,7 +233,7 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
         setBankDetails(null);
         setInvoiceNumber("");
         setTotalAmount(0);
-        setFormData({ client_name: "", email: "", phone: "", businessName: "", regNumber: "", billingAddress: "", heardAbout: "", plan: "once-off" });
+        setFormData({ client_name: "", email: "", phone: "", businessName: "", regNumber: "", vatNumber: "", billingAddress: "", heardAbout: "", plan: "once-off" });
       }, 300);
     }
     onOpenChange(open);
@@ -265,10 +270,16 @@ const EarlyBirdDialog = ({ open, onOpenChange, initialData }: EarlyBirdDialogPro
                   <Input id="eb-business" placeholder="My Construction Co." value={formData.businessName} onChange={(e) => handleChange("businessName", e.target.value)} required maxLength={100} />
                 </div>
                 {!initialData?.fromExternal && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="eb-reg">Registration Number</Label>
-                    <Input id="eb-reg" placeholder="2024/123456/07" value={formData.regNumber} onChange={(e) => handleChange("regNumber", e.target.value)} maxLength={50} />
-                  </div>
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="eb-reg">Registration Number</Label>
+                      <Input id="eb-reg" placeholder="2024/123456/07" value={formData.regNumber} onChange={(e) => handleChange("regNumber", e.target.value)} maxLength={50} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="eb-vat">VAT Number</Label>
+                      <Input id="eb-vat" placeholder="4012345678" value={formData.vatNumber} onChange={(e) => handleChange("vatNumber", e.target.value)} maxLength={50} />
+                    </div>
+                  </>
                 )}
               </div>
 

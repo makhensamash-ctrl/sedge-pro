@@ -77,7 +77,7 @@ const HeroSection = () => {
               {hero.subtitle} 
             </p>
               <hr className="border-t border-white/20 my-8" />
-            <div className="flex  gap-4 w-full max-w-2xl">
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-2xl">
              
             
 
@@ -87,14 +87,19 @@ const HeroSection = () => {
                
                 className="bg-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
-                {hero.cta_label}
+                <span className="hidden md:block">{'View '}</span >
+                <span className="">{'Pre-launch Promotion'}</span>
+                
+                
+                {/* {hero.cta_label} */}
               </a>
                 <a
                 href="#pricing"
                  className="border border-[#5BB624] hover:bg-[#3F8A14] active:scale-95 text-white text-xs font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-lg shadow-[#5BB624]/20 transition-all shrink-0 cursor-pointer"
               >
-                {'Access Complimentary Packages'}
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span className="hidden md:block">{'Access '}</span>
+                {'Complimentary Packages'}
+                <ArrowRight className="w-3.5 h-3.5 hidden lg:block" />
               </a> 
             </div>
           </motion.div>
