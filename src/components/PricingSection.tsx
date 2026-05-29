@@ -93,6 +93,7 @@ const PricingSection = () => {
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
   const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (!api) return;
@@ -101,6 +102,7 @@ const PricingSection = () => {
       setCanScrollPrev(api.canScrollPrev());
       setCanScrollNext(api.canScrollNext());
       setCurrent(api.selectedScrollSnap());
+      setCount(api.scrollSnapList().length);
     };
 
     onSelect();
@@ -609,7 +611,7 @@ const PricingSection = () => {
             </Button>
             
             <span className="text-sm font-bold text-foreground bg-surface/50 backdrop-blur-sm px-4 py-2 rounded-full border border-border/40 shadow-sm min-w-[3.5rem] text-center">
-              {current + 1} / {packages.length}
+              {current + 1} / {count || packages.length}
             </span>
 
             <Button
