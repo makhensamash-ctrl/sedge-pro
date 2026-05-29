@@ -36,7 +36,7 @@ interface Quotation {
   converted_to_invoice: boolean;
   business_profile_id: string | null;
   client_id: string | null;
-  clients: { name: string; email?: string; phone?: string; address?: string; company?: string } | null;
+  clients: { name: string; email?: string; phone?: string; address?: string; company?: string; reference_id?: string } | null;
   business_profiles: { business_name: string; business_logo?: string; contact_phone?: string; website_address?: string; physical_address?: string; bank_name?: string; account_holder_name?: string; account_number?: string; branch_code?: string; terms_and_conditions?: string } | null;
 }
 
@@ -75,7 +75,7 @@ const Quotations = () => {
   const { data: quotations = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-quotations'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('quotations').select(`*, clients(name, email, phone, address, company, vat_number), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, vat_number, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('quotations').select(`*, clients(name, email, phone, address, company, vat_number, reference_id), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, vat_number, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
       if (error) throw error;
       return data as Quotation[];
     }
@@ -99,7 +99,7 @@ const Quotations = () => {
   useQuery({
     queryKey: ['admin-clients'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('id, name, company').order('name');
+      const { data, error } = await supabase.from('clients').select('id, name, company, reference_id').order('name');
       if (error) throw error;
       setClients(data || []);
       return data;
@@ -383,7 +383,12 @@ const Quotations = () => {
             ) : filteredQuotations.map((q) => (
               <TableRow key={q.id}>
                 <TableCell className="font-medium">{q.quotation_number}</TableCell>
-                <TableCell>{q.clients?.name || '—'}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{q.clients?.name || '—'}</div>
+                  {q.clients?.reference_id && (
+                    <div className="text-xs text-muted-foreground font-mono">{q.clients.reference_id}</div>
+                  )}
+                </TableCell>
                 <TableCell>R{Number(q.total_amount).toLocaleString()}</TableCell>
                 <TableCell><Badge className={getStatusColor(q.status)}>{q.status}</Badge></TableCell>
                 <TableCell className="text-sm">{new Date(q.issue_date).toLocaleDateString()}</TableCell>
@@ -517,7 +522,7 @@ const Quotations = () => {
           {viewingQuotation && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{viewingQuotation.clients?.name || '—'}</span></div>
+                <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{viewingQuotation.clients?.name || '—'}{viewingQuotation.clients?.reference_id ? ` (${viewingQuotation.clients.reference_id})` : ''}</span></div>
                 <div><span className="text-muted-foreground">Status:</span> <Badge className={getStatusColor(viewingQuotation.status)}>{viewingQuotation.status}</Badge></div>
                 <div><span className="text-muted-foreground">Issue Date:</span> {new Date(viewingQuotation.issue_date).toLocaleDateString()}</div>
                 <div><span className="text-muted-foreground">Expiry:</span> {viewingQuotation.expiry_date ? new Date(viewingQuotation.expiry_date).toLocaleDateString() : '—'}</div>

@@ -31,6 +31,7 @@ interface InvoicePDFProps {
       address?: string;
       company?: string;
       vat_number?: string;
+      reference_id?: string;
     };
     business_profile?: {
       business_name: string;
@@ -142,6 +143,9 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ invoice, items = [] }) =
             </Text>
             {invoice.client?.company && invoice.client?.name && (
               <Text style={styles.businessDetails}>{invoice.client.name}</Text>
+            )}
+            {invoice.client?.reference_id && (
+              <Text style={styles.businessDetails}>Client Ref: {invoice.client.reference_id}</Text>
             )}
             {invoice.client?.email && (
               <Text style={styles.businessDetails}>{invoice.client.email}</Text>

@@ -40,7 +40,7 @@ interface Invoice {
   notes: string | null;
   business_profile_id: string | null;
   client_id: string | null;
-  clients: { name: string; email?: string; phone?: string; address?: string; company?: string } | null;
+  clients: { name: string; email?: string; phone?: string; address?: string; company?: string; reference_id?: string } | null;
   business_profiles: { business_name: string; business_logo?: string; contact_phone?: string; website_address?: string; physical_address?: string; bank_name?: string; account_holder_name?: string; account_number?: string; branch_code?: string; terms_and_conditions?: string } | null;
 }
 
@@ -83,7 +83,7 @@ const Invoices = () => {
   const { data: invoices = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-invoices'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('invoices').select(`*, clients(name, email, phone, address, company, vat_number), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, vat_number, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('invoices').select(`*, clients(name, email, phone, address, company, vat_number, reference_id), business_profiles(business_name, business_logo, contact_phone, website_address, physical_address, vat_number, bank_name, account_holder_name, account_number, branch_code, terms_and_conditions)`).order('created_at', { ascending: false });
       if (error) throw error;
       return data as Invoice[];
     }
@@ -107,7 +107,7 @@ const Invoices = () => {
   useQuery({
     queryKey: ['admin-clients'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('id, name, company').order('name');
+      const { data, error } = await supabase.from('clients').select('id, name, company, reference_id').order('name');
       if (error) throw error;
       setClients(data || []);
       return data;
@@ -517,7 +517,12 @@ const Invoices = () => {
             ) : filteredInvoices.map((inv) => (
               <TableRow key={inv.id}>
                 <TableCell className="font-medium">{inv.invoice_number}</TableCell>
-                <TableCell>{inv.clients?.name || '—'}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{inv.clients?.name || '—'}</div>
+                  {inv.clients?.reference_id && (
+                    <div className="text-xs text-muted-foreground font-mono">{inv.clients.reference_id}</div>
+                  )}
+                </TableCell>
                 <TableCell>R{Number(inv.total_amount).toLocaleString()}</TableCell>
                 <TableCell>
                   <Select value={inv.status} onValueChange={(val) => updateInvoiceStatus(inv, val)}>
@@ -696,7 +701,7 @@ const Invoices = () => {
           {viewingInvoice && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{viewingInvoice.clients?.name || '—'}</span></div>
+                <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{viewingInvoice.clients?.name || '—'}{viewingInvoice.clients?.reference_id ? ` (${viewingInvoice.clients.reference_id})` : ''}</span></div>
                <div><span className="text-muted-foreground">Status:</span> <Badge className={getStatusColor(viewingInvoice.status)}>{viewingInvoice.status}</Badge></div>
                <div><span className="text-muted-foreground">Update Status:</span>
                  <Select value={viewingInvoice.status} onValueChange={(v) => updateInvoiceStatus(viewingInvoice, v)}>

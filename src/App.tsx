@@ -18,6 +18,8 @@ import Invoices from "./pages/admin/Invoices";
 import Quotations from "./pages/admin/Quotations";
 import BusinessProfilePage from "./pages/admin/BusinessProfile";
 import ContentManager from "./pages/admin/ContentManager";
+import Clients from "./pages/admin/Clients";
+import ClientDetails from "./pages/admin/ClientDetails";
 import PopiaPolicy from "./pages/PopiaPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="crm" element={<CRM />} />
             <Route path="payments" element={<Payments />} />
             <Route path="users" element={<UsersManagement />} />
+            <Route path="clients" element={<Clients />} />
+            <Route path="clients/:id" element={<ClientDetails />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="packages" element={<Packages />} />
             <Route path="invoices" element={<Invoices />} />

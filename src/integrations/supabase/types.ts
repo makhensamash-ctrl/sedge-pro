@@ -100,6 +100,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          reference_id: string
           updated_at: string
           vat_number: string | null
         }
@@ -113,6 +114,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          reference_id?: string
           updated_at?: string
           vat_number?: string | null
         }
@@ -126,6 +128,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          reference_id?: string
           updated_at?: string
           vat_number?: string | null
         }

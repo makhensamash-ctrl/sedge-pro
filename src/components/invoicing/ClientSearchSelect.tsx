@@ -8,6 +8,7 @@ interface Client {
   id: string;
   name: string;
   company?: string | null;
+  reference_id?: string | null;
 }
 
 interface ClientSearchSelectProps {
@@ -27,7 +28,7 @@ export function ClientSearchSelect({
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   const displayText = selectedClient
-    ? `${selectedClient.name}${selectedClient.company ? ` - ${selectedClient.company}` : ""}`
+    ? `${selectedClient.name}${selectedClient.reference_id ? ` (${selectedClient.reference_id})` : ""}${selectedClient.company ? ` - ${selectedClient.company}` : ""}`
     : null;
 
   return (
@@ -68,13 +69,16 @@ export function ClientSearchSelect({
               {clients.map((client) => (
                 <CommandItem
                   key={client.id}
-                  value={`${client.name} ${client.company || ""}`}
+                  value={`${client.name} ${client.reference_id || ""} ${client.company || ""}`}
                   onSelect={() => {
                     onClientSelect(client.id);
                     setOpen(false);
                   }}
                 >
                   <span>{client.name}</span>
+                  {client.reference_id && (
+                    <span className="ml-2 text-muted-foreground text-xs font-mono">({client.reference_id})</span>
+                  )}
                   {client.company && (
                     <span className="ml-auto text-muted-foreground text-xs">{client.company}</span>
                   )}

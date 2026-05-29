@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLeadNotifications } from "@/hooks/useLeadNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt, Building2, Menu, FileEdit } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, LogOut, BarChart3, Kanban, Package, FileText, Receipt, Building2, Menu, FileEdit, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
@@ -13,6 +13,7 @@ import MfaSetupDialog from "@/components/MfaSetupDialog";
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
   { label: "CRM", icon: Kanban, path: "/admin/crm" },
+  { label: "Clients", icon: Contact, path: "/admin/clients" },
   { label: "Invoices", icon: FileText, path: "/admin/invoices" },
   { label: "Quotations", icon: Receipt, path: "/admin/quotations" },
   { label: "Payments", icon: CreditCard, path: "/admin/payments" },

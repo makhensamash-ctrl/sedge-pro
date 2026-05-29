@@ -31,6 +31,7 @@ interface QuotationPDFProps {
       address?: string;
       company?: string;
       vat_number?: string;
+      reference_id?: string;
     };
     business_profile?: {
       business_name: string;
@@ -129,6 +130,9 @@ export const QuotationPDF: React.FC<QuotationPDFProps> = ({ quotation, items = [
               <Text style={styles.clientName}>
                 {quotation.client?.company || quotation.client?.name || 'Customer Name'}
               </Text>
+              {quotation.client?.reference_id && (
+                <Text style={styles.clientDetails}>Client Ref: {quotation.client.reference_id}</Text>
+              )}
               {quotation.client?.email && (
                 <Text style={styles.clientDetails}>{quotation.client.email}</Text>
               )}
